@@ -1,0 +1,33 @@
+import type { Redis } from 'ioredis';
+
+import { ICacheService } from '../interfaces';
+
+export class RedisCacheService implements ICacheService {
+    constructor(
+        private enabled: boolean,
+        private redis: Redis,
+    ) {}
+
+    async get<T>(key: string): Promise<T | null> {
+        if (!this.enabled) return null;
+
+        const value = await this.redis.get(key);
+        return value ? (JSON.parse(value) as T) : null;
+    }
+
+    async set(key: string, value: any, ttl?: number): Promise<void> {
+        if (!this.enabled) return;
+
+        const data = JSON.stringify(value);
+        if (ttl && ttl > 0) {
+            await this.redis.set(key, data, 'EX', ttl);
+        } else {
+            await this.redis.set(key, data);
+        }
+    }
+
+    async del(key: string): Promise<void> {
+        if (!this.enabled) return;
+        await this.redis.del(key);
+    }
+}
