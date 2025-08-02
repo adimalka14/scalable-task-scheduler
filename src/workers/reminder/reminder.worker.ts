@@ -1,19 +1,17 @@
-import { Worker } from 'bullmq';
-import { REDIS_HOST, REDIS_PORT } from '../../shared/config/env.config';
-import { container } from '../container';
-import logger from '../../utils/logger';
+import { QueueWorker, WorkerJobConfig } from '../../shared/queue/scheduler/worker-scheduler';
 
-new Worker(
-    'reminderQueue',
-    async (job) => {
-        const { taskId } = job.data;
-        logger.info('Worker', `Executing reminder for task: ${taskId}`);
-        eventBus.publish('task.ready', { taskId });
-    },
+const remind = async (data) => {
+    console.log('reminder job data', data);
+};
+
+const jobs: WorkerJobConfig[] = [
     {
-        connection: {
-            host: REDIS_HOST,
-            port: Number(REDIS_PORT),
-        },
+        queue: 'reminders',
+        jobName: 'reminder',
+        handler: remind,
+        concurrency: 1,
     },
-);
+];
+
+const queueWorker = new QueueWorker(jobs);
+queueWorker.run();

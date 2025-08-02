@@ -1,31 +1,46 @@
-import { Worker } from 'bullmq';
-import redis from '../redis';
-import { logger } from '../utils/logger';
+import { TaskReminderWorker } from './task-reminder.worker';
+import { initContainer } from '../container';
+import logger from '../shared/utils/logger';
 
-export class QueueWorker {
-    constructor(
-        private readonly queueName: string,
-        private readonly handler: (job: any) => Promise<void>,
-    ) {}
+async function startWorker() {
+    try {
+        // Initialize container
+        await initContainer();
+        
+        // Get services from container
+        const { taskGateway, notificationService, eventBus } = (global as any).container;
 
-    run() {
-        const worker = new Worker(
-            this.queueName,
-            async (job) => {
-                logger.info('WORKER', `Received job ${job.name}`);
-                await this.handler(job);
-            },
-            { connection: redis },
+        // Initialize and start task reminder worker
+        const taskReminderWorker = new TaskReminderWorker(
+            taskGateway,
+            notificationService,
+            eventBus
         );
 
-        worker.on('completed', (job) => {
-            logger.info('WORKER', `Completed job ${job.id}`);
+        await taskReminderWorker.start();
+
+        logger.info('All workers started successfully');
+
+        // Keep the process alive
+        process.on('SIGINT', async () => {
+            logger.info('Shutting down workers...');
+            process.exit(0);
         });
 
-        worker.on('failed', (job, err) => {
-            logger.error('WORKER', `Failed job ${job?.id}`, err);
+        process.on('SIGTERM', async () => {
+            logger.info('Shutting down workers...');
+            process.exit(0);
         });
 
-        return worker;
+    } catch (error) {
+        logger.error('Error starting workers:', error);
+        process.exit(1);
     }
 }
+
+// Start the worker if this file is run directly
+if (require.main === module) {
+    startWorker();
+}
+
+export { startWorker }; 

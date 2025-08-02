@@ -48,7 +48,7 @@ describe('Logger', () => {
 
         logger.warn(requestId, message, metadata);
 
-        expect(mockLogger.log).toHaveBeenCalledWith('warning', message, {
+        expect(mockLogger.log).toHaveBeenCalledWith('warn', message, {
             request_id: requestId,
             ...metadata,
         });

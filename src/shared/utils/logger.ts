@@ -59,8 +59,8 @@ class Logger {
                         ...metadata
                     }: winston.Logform.TransformableInfo | PRINTF): string => {
                         return `${timestamp} [${level}] [${request_id}] ${message} ${stringifyMetaData(metadata)}`;
-                    }
-                )
+                    },
+                ),
             ),
         });
 
@@ -87,6 +87,11 @@ class Logger {
         return `File: ${filePath}, Line: ${line}, Column: ${column}`;
     }
 
+    private normalizeLevel(level: string): string {
+        if (level === 'warning') return 'warn';
+        return level;
+    }
+
     writeLog(level: LEVELS, request_id: string, message: string, options: any = {}) {
         if (Object.prototype.hasOwnProperty.call(options, 'message')) {
             options.$message = options.message;
@@ -103,7 +108,7 @@ class Logger {
             options.lineTrace = lineTrace;
         }
 
-        this.logger.log(level, message, { request_id, ...options });
+        this.logger.log(this.normalizeLevel(level), message, { request_id, ...options });
     }
 
     error(request_id: string, message: string, metadata: any = {}) {

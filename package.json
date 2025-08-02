@@ -16,6 +16,8 @@
   "scripts": {
     "start": "node dist/app.js",
     "dev": "npm run prisma:generate && ts-node-dev --respawn --transpile-only src/app.ts",
+    "worker": "npm run prisma:generate && ts-node src/workers/worker.ts",
+    "worker:dev": "npm run prisma:generate && ts-node-dev --respawn --transpile-only src/workers/worker.ts",
     "build": "tsc",
     "build:watch": "tsc -w",
     "test": "jest",

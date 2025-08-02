@@ -4,19 +4,15 @@ import helmet from 'helmet';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
 
-import { NODE_ENV, PORT } from '../shared/config/env.config';
-import { swaggerOptions } from '../shared/config/swagger';
-import logger from '../shared/utils/logger';
-import { connectDB } from '../shared/config/db.config';
+import { NODE_ENV, PORT } from './shared/config/env.config';
+import { swaggerOptions } from './shared/config/swagger';
+import logger from './shared/utils/logger';
+import { connectDB } from './shared/config/db.config';
 import { initContainer, container } from './container';
 
-import {
-    errorHandlerMW,
-    requestIdMW,
-    logApiMW,
-} from '../shared/middlewares';
+import { errorHandlerMW, requestIdMW, logApiMW } from './shared/middlewares';
 
-import { createRoutes, createWebhookRoutes } from './routes';
+import { createRoutes } from './routes';
 
 const app = express();
 
@@ -35,7 +31,7 @@ if (NODE_ENV !== 'production') {
     await connectDB();
     await initContainer();
 
-    app.use(createWebhookRoutes(container));
+    // use webhook here if needed
 
     app.use(express.json());
 

@@ -1,0 +1,1 @@
+export { RabbitTaskQueue } from './rabbitTaskQueue';

@@ -33,7 +33,7 @@ describe('BullScheduler', () => {
 
         // Check that job was added
         const instance = (scheduler as any).queues.get('emails');
-        expect(instance.add).toHaveBeenCalledWith('sendWelcome', { userId: 1 }, undefined);
+        expect(instance.add).toHaveBeenCalledWith('sendWelcome', { userId: 1 }, {});
 
         // Logger check
         expect(mockLogger.info).toHaveBeenCalledWith('QUEUE', 'Created queue: emails');
@@ -47,8 +47,8 @@ describe('BullScheduler', () => {
         expect(Queue).toHaveBeenCalledTimes(1);
 
         const instance = (scheduler as any).queues.get('jobs');
-        expect(instance.add).toHaveBeenCalledWith('task1', { x: 1 }, undefined);
-        expect(instance.add).toHaveBeenCalledWith('task2', { x: 2 }, undefined);
+        expect(instance.add).toHaveBeenCalledWith('task1', { x: 1 }, {});
+        expect(instance.add).toHaveBeenCalledWith('task2', { x: 2 }, {});
     });
 
     it('should pass delay, attempts, and backoff options', async () => {
@@ -57,5 +57,66 @@ describe('BullScheduler', () => {
 
         const instance = (scheduler as any).queues.get('delayed-jobs');
         expect(instance.add).toHaveBeenCalledWith('retryThis', { foo: 'bar' }, options);
+    });
+
+    it('should cancel a job if it exists', async () => {
+        const remove = jest.fn();
+        const mockJob = { remove };
+        const getJob = jest.fn().mockResolvedValue(mockJob);
+        const queueInstance = { add: jest.fn(), getJob };
+
+        (Queue as unknown as jest.Mock).mockImplementation(() => queueInstance);
+
+        await scheduler.cancelJob('cancel-queue', 'job-1');
+
+        expect(getJob).toHaveBeenCalledWith('job-1');
+        expect(remove).toHaveBeenCalled();
+        expect(mockLogger.info).toHaveBeenCalledWith('QUEUE', 'Removed job job-1 from cancel-queue');
+    });
+
+    it('should update a job by removing and re-adding it', async () => {
+        const remove = jest.fn();
+        const jobName = 'my-task';
+        const mockJob = { remove, name: jobName };
+        const getJob = jest.fn().mockResolvedValue(mockJob);
+        const add = jest.fn();
+
+        const queueInstance = { getJob, add };
+        (Queue as unknown as jest.Mock).mockImplementation(() => queueInstance);
+
+        await scheduler.updateJob('update-queue', 'job-2', { data: 123 }, 3000);
+
+        expect(getJob).toHaveBeenCalledWith('job-2');
+        expect(remove).toHaveBeenCalled();
+        expect(add).toHaveBeenCalledWith(
+            jobName,
+            { data: 123 },
+            {
+                jobId: 'job-2',
+                delay: 3000,
+            },
+        );
+
+        expect(mockLogger.info).toHaveBeenCalledWith('QUEUE', 'Updated job job-2 in update-queue');
+    });
+
+    it('should return job data when found', async () => {
+        const getJob = jest.fn().mockResolvedValue({ data: { a: 1 } });
+        const queueInstance = { getJob, add: jest.fn() };
+
+        (Queue as unknown as jest.Mock).mockImplementation(() => queueInstance);
+
+        const result = await scheduler.getJob('read-queue', 'job-3');
+        expect(result).toEqual({ a: 1 });
+    });
+
+    it('should return null when job not found', async () => {
+        const getJob = jest.fn().mockResolvedValue(null);
+        const queueInstance = { getJob, add: jest.fn() };
+
+        (Queue as unknown as jest.Mock).mockImplementation(() => queueInstance);
+
+        const result = await scheduler.getJob('read-queue', 'job-4');
+        expect(result).toBeNull();
     });
 });
