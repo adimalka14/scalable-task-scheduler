@@ -25,6 +25,7 @@ describe('validateBody middleware', () => {
                 name: 'John',
                 age: 25,
             },
+            headers: {},
         } as Request;
 
         const middleware = validateBodyMW(schema);
@@ -39,6 +40,7 @@ describe('validateBody middleware', () => {
                 name: 'John',
                 age: -5,
             },
+            headers: {},
         } as Request;
 
         const middleware = validateBodyMW(schema);
@@ -47,7 +49,7 @@ describe('validateBody middleware', () => {
         expect(next).toHaveBeenCalledWith(
             expect.objectContaining({
                 status: 400,
-                name: 'Bad Request',
+                name: 'ValidationError',
                 message: 'Invalid request body',
                 details: expect.any(Object),
             })

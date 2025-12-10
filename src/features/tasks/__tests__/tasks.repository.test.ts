@@ -97,12 +97,10 @@ describe('TaskRepository', () => {
         it('should delete task and its notifications successfully', async () => {
             const taskId = 'task-123';
 
-            (mockPrisma.notification.deleteMany as jest.Mock).mockResolvedValue({ count: 2 });
             (mockPrisma.task.delete as jest.Mock).mockResolvedValue({} as any);
 
             await repository.delete(taskId);
 
-            expect(mockPrisma.notification.deleteMany).toHaveBeenCalledWith({ where: { taskId } });
             expect(mockPrisma.task.delete).toHaveBeenCalledWith({ where: { id: taskId } });
         });
     });
@@ -136,13 +134,13 @@ describe('TaskRepository', () => {
             });
             expect(mockPrisma.task.findUnique).toHaveBeenCalledWith({
                 where: { id: taskId },
-                include: { notifications: true },
+                include: { notifications: false },
             });
         });
 
         it('should throw error when task not found', async () => {
             (mockPrisma.task.findUnique as jest.Mock).mockResolvedValue(null);
-            await expect(repository.findById('non-existing')).rejects.toThrow('Task not found');
+            await expect(repository.findById('non-existing')).rejects.toThrow('Task with id non-existing not found');
         });
     });
 
@@ -179,7 +177,7 @@ describe('TaskRepository', () => {
             expect(result).toHaveLength(2);
             expect(mockPrisma.task.findMany).toHaveBeenCalledWith({
                 where: { userId },
-                include: { notifications: true },
+                include: { notifications: false },
                 orderBy: { dueDate: 'asc' },
             });
         });

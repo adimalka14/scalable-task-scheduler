@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { ITaskFacade } from './tasks.interfaces';
 import { CreateTaskDto, UpdateTaskDto } from './tasks.types';
@@ -7,7 +7,7 @@ import logger from '../../shared/utils/logger';
 export class TaskController {
     constructor(private taskFacade: ITaskFacade) {}
 
-    async createTask(req: Request, res: Response): Promise<void> {
+    async createTask(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const { title, dueDate, userId } = req.body;
 
@@ -30,18 +30,11 @@ export class TaskController {
                 data: task,
             });
         } catch (error) {
-            logger.error('TASK_CTRL', 'Error creating task', { 
-                error, 
-                reqId: req.headers['x-request-id'] 
-            });
-            res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-                success: false,
-                message: 'Internal server error',
-            });
+            next(error);
         }
     }
 
-    async updateTask(req: Request, res: Response): Promise<void> {
+    async updateTask(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const taskId = req.params.taskId as string;
             const { title, dueDate } = req.body as { title?: string; dueDate?: string };
@@ -62,28 +55,11 @@ export class TaskController {
                 data: task,
             });
         } catch (error) {
-            logger.error('TASK_CTRL', 'Error updating task', { 
-                error, 
-                taskId: req.params.taskId,
-                reqId: req.headers['x-request-id'] 
-            });
-            
-            if (error instanceof Error && error.message === 'Task not found') {
-                res.status(StatusCodes.NOT_FOUND).json({
-                    success: false,
-                    message: 'Task not found',
-                });
-                return;
-            }
-            
-            res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-                success: false,
-                message: 'Internal server error',
-            });
+            next(error);
         }
     }
 
-    async deleteTask(req: Request, res: Response): Promise<void> {
+    async deleteTask(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const taskId = req.params.taskId as string;
 
@@ -99,91 +75,37 @@ export class TaskController {
                 message: 'Task deleted successfully',
             });
         } catch (error) {
-            logger.error('TASK_CTRL', 'Error deleting task', { 
-                error, 
-                taskId: req.params.taskId,
-                reqId: req.headers['x-request-id'] 
-            });
-            
-            if (error instanceof Error && error.message === 'Task not found') {
-                res.status(StatusCodes.NOT_FOUND).json({
-                    success: false,
-                    message: 'Task not found',
-                });
-                return;
-            }
-            
-            res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-                success: false,
-                message: 'Internal server error',
-            });
+            next(error);
         }
     }
 
-    async getTask(req: Request, res: Response): Promise<void> {
+    async getTask(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const taskId = req.params.taskId as string;
 
             const task = await this.taskFacade.getTask(taskId);
-
-            logger.debug('TASK_CTRL', 'Task retrieved successfully', { 
-                taskId, 
-                reqId: req.headers['x-request-id'] 
-            });
 
             res.status(StatusCodes.OK).json({
                 success: true,
                 data: task,
             });
         } catch (error) {
-            logger.error('TASK_CTRL', 'Error getting task', { 
-                error, 
-                taskId: req.params.taskId,
-                reqId: req.headers['x-request-id'] 
-            });
-            
-            if (error instanceof Error && error.message === 'Task not found') {
-                res.status(StatusCodes.NOT_FOUND).json({
-                    success: false,
-                    message: 'Task not found',
-                });
-                return;
-            }
-            
-            res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-                success: false,
-                message: 'Internal server error',
-            });
+            next(error);
         }
     }
 
-    async getUserTasks(req: Request, res: Response): Promise<void> {
+    async getUserTasks(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const userId = req.params.userId as string;
 
             const tasks = await this.taskFacade.getUserTasks(userId);
-
-            logger.debug('TASK_CTRL', 'User tasks retrieved successfully', { 
-                userId, 
-                taskCount: tasks.length,
-                reqId: req.headers['x-request-id'] 
-            });
 
             res.status(StatusCodes.OK).json({
                 success: true,
                 data: tasks,
             });
         } catch (error) {
-            logger.error('TASK_CTRL', 'Error getting user tasks', { 
-                error, 
-                userId: req.params.userId,
-                reqId: req.headers['x-request-id'] 
-            });
-            
-            res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-                success: false,
-                message: 'Internal server error',
-            });
+            next(error);
         }
     }
 }

@@ -55,7 +55,7 @@ describe('TaskController Integration', () => {
             
             mockFacade.createTask.mockResolvedValue(expectedTask);
             
-            await controller.createTask(mockRequest as Request, mockResponse as Response);
+            await controller.createTask(mockRequest as Request, mockResponse as Response, jest.fn());
             
             expect(mockFacade.createTask).toHaveBeenCalledWith({
                 title: 'Test Task',
@@ -84,13 +84,12 @@ describe('TaskController Integration', () => {
             const error = new Error('Database error');
             mockFacade.createTask.mockRejectedValue(error);
             
-            await controller.createTask(mockRequest as Request, mockResponse as Response);
+            const mockNext = jest.fn();
+            await controller.createTask(mockRequest as Request, mockResponse as Response, mockNext);
             
-            expect(responseStatus).toHaveBeenCalledWith(500);
-            expect(responseJson).toHaveBeenCalledWith({
-                success: false,
-                message: 'Internal server error',
-            });
+            expect(mockNext).toHaveBeenCalledWith(error);
+            expect(responseStatus).not.toHaveBeenCalled();
+            expect(responseJson).not.toHaveBeenCalled();
         });
     });
 
@@ -118,7 +117,7 @@ describe('TaskController Integration', () => {
             
             mockFacade.updateTask.mockResolvedValue(expectedTask);
             
-            await controller.updateTask(mockRequest as Request, mockResponse as Response);
+            await controller.updateTask(mockRequest as Request, mockResponse as Response, jest.fn());
             
             expect(mockFacade.updateTask).toHaveBeenCalledWith(taskId, updateData);
             expect(responseStatus).toHaveBeenCalledWith(200);
@@ -141,15 +140,15 @@ describe('TaskController Integration', () => {
             };
             
             const error = new Error('Task not found');
+            (error as any).status = 404;
             mockFacade.updateTask.mockRejectedValue(error);
             
-            await controller.updateTask(mockRequest as Request, mockResponse as Response);
+            const mockNext = jest.fn();
+            await controller.updateTask(mockRequest as Request, mockResponse as Response, mockNext);
             
-            expect(responseStatus).toHaveBeenCalledWith(404);
-            expect(responseJson).toHaveBeenCalledWith({
-                success: false,
-                message: 'Task not found',
-            });
+            expect(mockNext).toHaveBeenCalledWith(error);
+            expect(responseStatus).not.toHaveBeenCalled();
+            expect(responseJson).not.toHaveBeenCalled();
         });
     });
 
@@ -164,7 +163,7 @@ describe('TaskController Integration', () => {
             
             mockFacade.deleteTask.mockResolvedValue();
             
-            await controller.deleteTask(mockRequest as Request, mockResponse as Response);
+            await controller.deleteTask(mockRequest as Request, mockResponse as Response, jest.fn());
             
             expect(mockFacade.deleteTask).toHaveBeenCalledWith(taskId);
             expect(responseStatus).toHaveBeenCalledWith(200);
@@ -194,7 +193,7 @@ describe('TaskController Integration', () => {
             
             mockFacade.getTask.mockResolvedValue(expectedTask);
             
-            await controller.getTask(mockRequest as Request, mockResponse as Response);
+            await controller.getTask(mockRequest as Request, mockResponse as Response, jest.fn());
             
             expect(mockFacade.getTask).toHaveBeenCalledWith(taskId);
             expect(responseStatus).toHaveBeenCalledWith(200);
@@ -234,7 +233,7 @@ describe('TaskController Integration', () => {
             
             mockFacade.getUserTasks.mockResolvedValue(expectedTasks);
             
-            await controller.getUserTasks(mockRequest as Request, mockResponse as Response);
+            await controller.getUserTasks(mockRequest as Request, mockResponse as Response, jest.fn());
             
             expect(mockFacade.getUserTasks).toHaveBeenCalledWith(userId);
             expect(responseStatus).toHaveBeenCalledWith(200);

@@ -34,6 +34,7 @@ export class BullScheduler implements ISchedulerQueue {
         ) as JobsOptions;
 
         await queue.add(jobName, data, cleanedOptions);
+        logger.info('QUEUE', `Scheduled job ${jobName} in ${queueName}`);
     }
 
     async cancelJob(queueName: string, jobId: string): Promise<void> {

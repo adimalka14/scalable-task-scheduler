@@ -56,12 +56,32 @@ This guide outlines a clean, extensible, and scalable architecture pattern for *
 3. **Separate layers clearly** - DTO, Prisma Model, Mapping Function
 4. **Use explicit mapping functions** - `toTaskDto(prismaTask)`
 5. **Handle TypeScript strict mode** - Avoid generic helpers, prefer inline casting
+6. **Use `jest.useFakeTimers()`** for time-sensitive tests
+7. **Mock Prisma with `as unknown as PrismaClient`** - Not `jest.Mocked<PrismaClient>`
+8. **Use factory functions** for test data to avoid repetition
+
+### Logging & Error Handling Rules:
+1. **NO try/catch in Repository/Service layers** - Only Facade/Controller should catch
+2. **NO excessive logging** - Only meaningful business events
+3. **Use appropriate log levels**:
+   - `logger.info()` - Business events (task created, event published)
+   - `logger.warn()` - Business warnings (task overdue)
+   - `logger.error()` - Actual errors with context
+   - `logger.debug()` - Only for debugging, not in production
+4. **NO duplicate logs** - Don't log same event in multiple layers
+5. **Structured logging** - Always include context and request ID
 
 ### TODO & Development Rules:
 1. **Comment out unimplemented features** - Use `// notifications: Notification[];` with TODO
 2. **Add TODO comments** - `// TODO: Implement notification DTO and mapping`
 3. **Plan for future implementation** - Document what needs to be done
 4. **Don't break existing tests** - Comment out dependencies that don't exist yet
+
+### Module Testing Rules:
+1. **Export `__testing__` object** in module factory for testing access
+2. **Include all layers** in `__testing__` for comprehensive testing
+3. **Use `__testing__` for integration tests** and module composition tests
+4. **Keep `__testing__` internal** - Only for testing, not production use
 
 ---
 
@@ -335,6 +355,12 @@ export function createUsersModule(deps: UsersModuleDeps) {
   return {
     controller: createUsersController(facade),
     gateway,
+    __testing__: {
+      repository: repo,
+      service,
+      facade,
+      controller,
+    },
   };
 }
 ```
@@ -382,6 +408,11 @@ export function createUsersModule(deps: UsersModuleDeps) {
 
 * ❌ `notifications: Notification[]` (when Notification doesn't exist)
 * ✅ `// notifications: Notification[]; // TODO: Implement notification DTO`
+
+🚫 Missing `__testing__` export in modules
+
+* ❌ No access to internal components for testing
+* ✅ Export `__testing__` object with all layers
 
 ---
 
@@ -627,5 +658,6 @@ export async function triggerWelcomeFlow(userId: string) {
 * Comprehensive testing with mocks
 * Always map Prisma results to DTOs
 * Comment out unimplemented features with TODO
+* Export `__testing__` object in modules for testing access
 
 > Designed to be **extendable**, **modular**, and **agent-friendly**

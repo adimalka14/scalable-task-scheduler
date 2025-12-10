@@ -3,7 +3,7 @@ import winstonDailyRotateFile from 'winston-daily-rotate-file';
 
 import { LOGGING_MODE, LOGGING_LINE_TRACE, LOG_DIR_PATH } from '../config/env.config';
 
-const appName = 'payments-api';
+const appName = 'scalable-task-scheduler';
 
 const enum LEVELS {
     error = 'error',

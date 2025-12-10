@@ -23,7 +23,3 @@ export interface ITaskFacade {
     getTask(id: string): Promise<Task>;
     getUserTasks(userId: string): Promise<Task[]>;
 }
-
-export interface ITaskGateway {
-    getTask(id: string): Promise<Task>;
-} 

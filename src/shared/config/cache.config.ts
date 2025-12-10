@@ -5,7 +5,8 @@ import logger from '../utils/logger';
 const redis = new Redis({
     host: REDIS_HOST,
     port: REDIS_PORT,
-    password: REDIS_PASSWORD
+    password: REDIS_PASSWORD,
+    maxRetriesPerRequest: null,
 });
 
 redis.on('connect', () => {

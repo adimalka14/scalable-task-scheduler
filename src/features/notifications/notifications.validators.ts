@@ -1,18 +1,29 @@
 import { z } from 'zod';
+import { NOTIFICATION_TYPES, NOTIFICATION_STATUS } from './notifications.types';
 
 export const createNotificationSchema = z.object({
     taskId: z.string().uuid('Invalid task ID'),
-    type: z.string().min(1, 'Type is required').max(50, 'Type too long'),
-    status: z.string().min(1, 'Status is required').max(20, 'Status too long'),
+    type: z.enum([NOTIFICATION_TYPES.REMINDER], {
+        message: `Type must be one of: ${Object.values(NOTIFICATION_TYPES).join(', ')}`,
+    }),
+    status: z.enum([NOTIFICATION_STATUS.PENDING, NOTIFICATION_STATUS.SENT], {
+        message: `Status must be one of: ${Object.values(NOTIFICATION_STATUS).join(', ')}`,
+    }),
     message: z.string().min(1, 'Message is required').max(500, 'Message too long'),
-    sentAt: z.string().datetime('Invalid date format'),
 });
 
 export const updateNotificationSchema = z.object({
-    type: z.string().min(1, 'Type is required').max(50, 'Type too long').optional(),
-    status: z.string().min(1, 'Status is required').max(20, 'Status too long').optional(),
+    type: z
+        .enum([NOTIFICATION_TYPES.REMINDER], {
+            message: `Type must be one of: ${Object.values(NOTIFICATION_TYPES).join(', ')}`,
+        })
+        .optional(),
+    status: z
+        .enum([NOTIFICATION_STATUS.PENDING, NOTIFICATION_STATUS.SENT], {
+            message: `Status must be one of: ${Object.values(NOTIFICATION_STATUS).join(', ')}`,
+        })
+        .optional(),
     message: z.string().min(1, 'Message is required').max(500, 'Message too long').optional(),
-    sentAt: z.string().datetime('Invalid date format').optional(),
 });
 
 export const notificationIdSchema = z.object({
@@ -24,5 +35,7 @@ export const taskIdSchema = z.object({
 });
 
 export const statusSchema = z.object({
-    status: z.string().min(1, 'Status is required').max(20, 'Status too long'),
-}); 
+    status: z.enum([NOTIFICATION_STATUS.PENDING, NOTIFICATION_STATUS.SENT], {
+        message: `Status must be one of: ${Object.values(NOTIFICATION_STATUS).join(', ')}`,
+    }),
+});

@@ -26,8 +26,3 @@ export interface INotificationFacade {
     getTaskNotifications(taskId: string): Promise<Notification[]>;
     getNotificationsByStatus(status: string): Promise<Notification[]>;
 }
-
-export interface INotificationGateway {
-    getNotification(id: string): Promise<Notification>;
-    getTaskNotifications(taskId: string): Promise<Notification[]>;
-} 

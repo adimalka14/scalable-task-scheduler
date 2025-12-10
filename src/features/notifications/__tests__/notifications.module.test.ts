@@ -1,35 +1,26 @@
-import { createTasksModule } from '../tasks.module';
-import { TaskRepository } from '../tasks.repository';
-import { TaskService } from '../tasks.service';
-import { TaskFacade } from '../tasks.facade';
-import { TaskController } from '../tasks.controller';
+import { createNotificationsModule } from '../notifications.module';
+import { NotificationRepository } from '../notifications.repository';
+import { NotificationService } from '../notifications.service';
+import { NotificationFacade } from '../notifications.facade';
+import { NotificationController } from '../notifications.controller';
 import { PrismaClient } from '@prisma/client';
-import { ISchedulerQueue, IEventBus, ICacheService } from '../../../shared/interfaces';
+import { IEventBus } from '../../../shared/interfaces';
+import { NOTIFICATION_TYPES, NOTIFICATION_STATUS } from '../notifications.types';
 
-describe('TasksModule', () => {
-    let module: Awaited<ReturnType<typeof createTasksModule>>;
+describe('NotificationsModule', () => {
+    let module: Awaited<ReturnType<typeof createNotificationsModule>>;
     let mockPrisma: jest.Mocked<PrismaClient>;
-    let mockSchedulerQueue: jest.Mocked<ISchedulerQueue>;
     let mockEventBus: jest.Mocked<IEventBus>;
-    let mockCacheService: jest.Mocked<ICacheService>;
 
     beforeEach(async () => {
         mockPrisma = {
-            task: {
+            notification: {
                 create: jest.fn(),
                 update: jest.fn(),
                 delete: jest.fn(),
                 findUnique: jest.fn(),
                 findMany: jest.fn(),
             },
-            notification: {
-                deleteMany: jest.fn(),
-            },
-        } as any;
-
-        mockSchedulerQueue = {
-            scheduleJob: jest.fn(),
-            cancelJob: jest.fn(),
         } as any;
 
         mockEventBus = {
@@ -37,17 +28,9 @@ describe('TasksModule', () => {
             subscribe: jest.fn(),
         } as any;
 
-        mockCacheService = {
-            get: jest.fn().mockResolvedValue(null),
-            set: jest.fn().mockResolvedValue(undefined),
-            del: jest.fn().mockResolvedValue(undefined),
-        } as any;
-
-        module = await createTasksModule({
+        module = await createNotificationsModule({
             prisma: mockPrisma,
-            schedulerQueue: mockSchedulerQueue,
             eventBus: mockEventBus,
-            cacheService: mockCacheService,
         });
     });
 
@@ -57,34 +40,41 @@ describe('TasksModule', () => {
             expect(module.routes).toBeDefined();
         });
 
-
         it('should expose routes for external access', () => {
             expect(module.routes).toBeDefined();
             expect(typeof module.routes.stack).toBe('object');
+        });
+
+        it('should expose __testing__ object for testing', () => {
+            expect(module.__testing__).toBeDefined();
+            expect(module.__testing__.repository).toBeInstanceOf(NotificationRepository);
+            expect(module.__testing__.service).toBeInstanceOf(NotificationService);
+            expect(module.__testing__.facade).toBeInstanceOf(NotificationFacade);
+            expect(module.__testing__.controller).toBeInstanceOf(NotificationController);
         });
     });
 
     describe('dependency injection', () => {
         it('should inject prisma into repository', () => {
             const { repository } = module.__testing__;
-            expect(repository).toBeInstanceOf(TaskRepository);
+            expect(repository).toBeInstanceOf(NotificationRepository);
         });
 
         it('should inject repository into service', () => {
             const { service } = module.__testing__;
-            expect(service).toBeInstanceOf(TaskService);
+            expect(service).toBeInstanceOf(NotificationService);
         });
 
-        it('should inject service, scheduler, and eventBus into facade', () => {
+        it('should inject service and eventBus into facade', () => {
             const { facade } = module.__testing__;
-            expect(facade).toBeInstanceOf(TaskFacade);
+            expect(facade).toBeInstanceOf(NotificationFacade);
         });
+
 
         it('should inject facade into controller', () => {
             const { controller } = module.__testing__;
-            expect(controller).toBeInstanceOf(TaskController);
+            expect(controller).toBeInstanceOf(NotificationController);
         });
-
     });
 
 });

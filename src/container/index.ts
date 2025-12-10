@@ -1,18 +1,23 @@
+import redis from '../shared/config/cache.config';
 import { RedisCacheService } from '../shared/cache/cache.service';
 import { ICacheService, IEventBus, ISchedulerQueue } from '../shared/interfaces';
 import { RabbitEventBus } from '../shared/queue/event-bus';
+import { BullScheduler } from '../shared/queue/scheduler';
 import { createConnection } from '../shared/config/rabbit';
+import { prisma } from '../shared/config/db.config';
 import { createTasksModule } from '../features/tasks/tasks.module';
 import { createNotificationsModule } from '../features/notifications/notifications.module';
-import Redis from 'ioredis';
-
-const USE_CACHE = process.env.USE_CACHE === 'true';
-const redis = new Redis({
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379'),
-});
+import { USE_CACHE } from '../shared/config/env.config';
 
 export let container: any;
+
+export async function initWorkerContainer() {
+    await createConnection();
+    const eventBus = new RabbitEventBus('event-bus') as IEventBus;
+    return {
+        eventBus,
+    };
+}
 
 export async function initContainer() {
     const cacheService = new RedisCacheService(USE_CACHE, redis) as ICacheService;
@@ -20,25 +25,16 @@ export async function initContainer() {
     await createConnection();
     const eventBus = new RabbitEventBus('event-bus') as IEventBus;
 
-    const { PrismaClient } = await import('@prisma/client');
-    const prisma = new PrismaClient();
+    const schedulerQueue = new BullScheduler() as ISchedulerQueue;
 
-    const schedulerQueue = {
-        scheduleJob: async (queueName: string, jobName: string, data: any, options: any) => {
-            console.log(`Scheduling job: ${jobName} in queue: ${queueName}`, data, options);
-        },
-        cancelJob: async (queueName: string, jobId: string) => {
-            console.log(`Cancelling job: ${jobId} in queue: ${queueName}`);
-        },
-    } as ISchedulerQueue;
-
-    const tasksModule = createTasksModule({
+    const tasksModule = await createTasksModule({
         prisma,
         schedulerQueue,
         eventBus,
+        cacheService,
     });
 
-    const notificationsModule = createNotificationsModule({
+    const notificationsModule = await createNotificationsModule({
         prisma,
         eventBus,
     });
@@ -46,11 +42,7 @@ export async function initContainer() {
     container = {
         cacheService,
         eventBus,
-        taskService: tasksModule.gateway,
-        taskGateway: tasksModule.gateway,
-        notificationService: notificationsModule.gateway,
-        notificationGateway: notificationsModule.gateway,
-        prisma,
+        db: prisma,
         schedulerQueue,
         tasksModule,
         notificationsModule,

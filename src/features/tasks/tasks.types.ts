@@ -5,7 +5,6 @@ export interface Task {
     userId: string;
     createdAt: Date;
     updatedAt: Date;
-    //notifications: Notification[];
 }
 
 export interface CreateTaskDto {
