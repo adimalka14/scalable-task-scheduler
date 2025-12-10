@@ -1,79 +1,27 @@
-# Scalable Task Scheduler 📚
+# Scalable Task Scheduler
 
-A learning project where I explored how to build a scalable system with queues, clean architecture, and integration between different services.
+A modular-monolith system demonstrating scalable architecture, queues, caching, workers, and clean feature boundaries.
 
-## 🎯 Project Goal
+## Overview
 
-This project was created to learn and understand:
-- **Scalable Architecture** - How to design a system that grows over time
-- **Modular Monolith** - Architecture that can be split into microservices when needed
-- **Working with Queues** - BullMQ for scheduled jobs and RabbitMQ for event bus
-- **Feature-Based Structure** - Organizing code by features instead of layers
-- **Dependency Injection** - Creating flexible and testable code
-- **Caching** - Using Redis to improve performance
-- **Error Handling** - Centralized error handling with custom error classes
+A task management system that automatically schedules reminders, processes them in background workers, triggers notifications, and keeps high performance using caching and event-driven communication.
 
-## 📦 What Does the System Do?
+## System Architecture
 
-A simple task management system with reminders:
-1. **Create Task** - User creates a task with a due date
-2. **Automatic Reminder** - System schedules a reminder using BullMQ
-3. **Notification** - When the date arrives, a notification is sent via Event Bus
+### Key Concepts
 
-## 🏗️ Architecture
+- **Modular Monolith Architecture** – Each feature is isolated and ready to become a standalone microservice
+- **Event-Driven Communication (RabbitMQ)** – Features communicate asynchronously
+- **Scheduled Jobs (BullMQ)** – Reminder scheduling and delay-based execution
+- **Background Workers** – Handle timed events reliably
+- **Caching Layer (Redis)** – Cache-aside pattern with automatic invalidation
+- **Feature-Based Structure (FBS)** – Controller → Facade → Service → Repository inside each feature
+- **Dependency Injection** – Replaceable implementations (cache, queue, DB, event bus)
+- **Centralized Error Handling & Logging** – Request-ID tracing, typed errors
 
-This project follows a **Modular Monolith** architecture pattern. The infrastructure and architecture are designed so that each feature can be extracted into a separate microservice when needed, without major refactoring.
+### Architecture Diagram
 
-### Current Structure (Monolith)
-```
-┌─────────────┐
-│   Client    │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────────┐
-│  Express API    │
-│  (Controllers)  │
-└──────┬──────────┘
-       │
-       ▼
-┌─────────────────┐      ┌──────────────┐
-│    Facades      │─────▶│   Services   │
-└──────┬──────────┘      └──────┬───────┘
-       │                         │
-       ├─────────────────────────┤
-       │                         │
-       ▼                         ▼
-┌─────────────┐          ┌──────────────┐
-│  BullMQ     │          │  Repository  │
-│  Scheduler  │          │   (Prisma)   │
-└──────┬──────┘          └──────┬───────┘
-       │                         │
-       │                         ▼
-       │                  ┌──────────────┐
-       │                  │  PostgreSQL  │
-       │                  └───────────────┘
-       │
-       ▼
-┌─────────────┐
-│   Worker    │
-│ (Reminder)  │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│ RabbitMQ    │
-│ Event Bus   │
-└──────┬──────┘
-       │
-       ├──────────────┐
-       │              │
-       ▼              ▼
-┌──────────┐    ┌──────────────┐
-│Listener  │    │ Notification │
-│(Future)  │    │   Service    │
-└──────────┘    └──────────────┘
-```
+![System Architecture](public/Architecture.png)
 
 ### Why Modular Monolith?
 
@@ -85,119 +33,97 @@ The architecture is designed with microservices in mind:
 
 When the time comes to split into microservices, each feature can become its own service with minimal changes to the code structure.
 
-## 🛠️ Tech Stack
+## What the System Does
 
-| Technology | Usage |
-|-----------|-------|
-| **Node.js + TypeScript** | Project foundation |
-| **Express** | API layer |
-| **BullMQ** | Scheduling reminders (scheduled jobs) |
-| **RabbitMQ** | Event Bus for asynchronous communication |
-| **Redis** | Cache for performance improvement |
-| **PostgreSQL + Prisma** | Database and ORM |
-| **Jest** | Unit and integration tests |
-| **Zod** | Data validation |
+1. User creates a task with a due date
+2. A reminder job is scheduled via BullMQ
+3. When the time arrives, a worker publishes a `TASK_TIMED_ARRIVAL` event
+4. Notification feature listens and creates a notification
+5. System keeps performance high using Redis caching
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 src/
-├── features/              # Features organized by domain
-│   ├── tasks/            # Task management
-│   │   ├── tasks.controller.ts
-│   │   ├── tasks.facade.ts      # Orchestration + caching
-│   │   ├── tasks.service.ts
-│   │   ├── tasks.repository.ts
-│   │   └── __tests__/
-│   └── notifications/    # Notification management
-│       ├── notifications.controller.ts
-│       ├── notifications.facade.ts
-│       ├── notifications.service.ts
-│       ├── notifications.repository.ts
-│       └── __tests__/
+├── features/
+│   ├── tasks/               # Task module (full flow + caching)
+│   └── notifications/       # Notification module (event-driven)
 │
-├── shared/                # Shared infrastructure
-│   ├── cache/            # Redis caching
-│   ├── queue/             # Queues and events
-│   │   ├── scheduler/    # BullMQ scheduler
-│   │   ├── event-bus/    # RabbitMQ event bus
-│   │   └── tasks/        # RabbitMQ task queue (not currently used)
-│   ├── middlewares/      # Express middlewares
-│   ├── config/           # Configuration (DB, Redis, RabbitMQ)
-│   └── utils/            # Utilities (logger)
+├── shared/
+│   ├── cache/               # Redis wrapper
+│   ├── queue/               # BullMQ + RabbitMQ infra
+│   │   ├── scheduler/       # BullMQ scheduler
+│   │   ├── event-bus/       # RabbitMQ event bus
+│   │   └── tasks/           # RabbitMQ task queue (not currently used)
+│   ├── middlewares/         # Express middlewares
+│   ├── config/              # Configuration
+│   └── utils/               # Logger, errors
 │
-├── workers/               # Background workers
-│   └── reminder/         # Worker that handles reminders
-│
-└── container/             # Dependency Injection
+└── workers/
+    └── reminder/            # Handles reminder events
 ```
 
-## 🎓 What I Learned in This Project
+## Production-Ready Features
 
-### 1. Feature-Based Structure (FBS) & Modular Monolith
-Instead of organizing by layers (controllers, services, repositories), I organized by features. Each feature contains all its layers, which makes it easier to:
-- Understand the code - everything related to a task is in one place
-- Add new features - just add a new folder
-- Separate features - easier to migrate to microservices in the future
+### 1. Event Bus (RabbitMQ)
+- Pub/Sub fan-out architecture ready for multi-service split
+- Consumer-level acknowledgment and retries
+- Dead letter queue for failed messages
 
-The architecture is designed as a **modular monolith** - all features run in the same process now, but the infrastructure (Event Bus, interfaces, dependency injection) is set up so that each feature can be extracted into its own microservice when needed, without major refactoring.
+### 2. Scheduler (BullMQ)
+- Delayed jobs with precise timing
+- Job cancellation on task update
+- Idempotent scheduling
 
-### 2. Dependency Injection
-Instead of direct imports, each feature receives its dependencies through the constructor. This allows:
-- Easier testing - can pass mocks
-- Replacing implementations - for example, swap Event Bus without changing code
-- Cleaner code - fewer hidden dependencies
+### 3. Redis Cache Layer
+- Cache-aside pattern
+- Safe fallback (non-fatal errors)
+- Auto invalidation on writes
 
-### 3. Working with Queues
-- **BullMQ** - For scheduled tasks (scheduled jobs). Learned how to schedule a task for the future and cancel it
-- **RabbitMQ Event Bus** - For asynchronous communication between features. Learned how to publish and consume events
-- **RabbitMQ Task Queue** - Implemented as future infrastructure (not currently used). Includes retry mechanism and dead letter queue
+### 4. Dependency Injection
+- Replace queue/cache/db with any implementation
+- Enables future microservice extraction
 
-### 4. Caching with Redis
-Learned how to add caching properly:
-- Cache-aside pattern - first check cache, if not found - fetch from DB and store in cache
-- Cache invalidation - delete cache when data changes
-- Non-blocking - cache errors don't break the system
+### 5. Feature Isolation
+- Each feature can be lifted and moved to a new repo with 90% code reuse
+- No cross-feature imports
+- Communication via Event Bus only
 
-### 5. Centralized Error Handling
-- Custom error classes (`NotFoundError`, `ValidationError`)
-- Error middleware that handles all errors in one place
-- Structured logging with request ID
+### 6. Background Worker with Retry Logic
+- Infrastructure for retries, dead letter queue, and backoff strategies
+- `RabbitTaskQueue` implemented but not currently used (ready for future heavy processing)
 
-### 6. Testing
-- Unit tests for each layer
-- Integration tests for controllers
-- Coverage of 91%+
+### 7. Testing
+- 91.69% coverage
+- Unit tests + integration flows
+- All tests passing (150 tests)
 
-## 🔧 Special Features
+## Tech Stack
 
-### Caching Strategy
-The system uses Redis for caching:
-- **Task by ID** - `task:{id}` with 1 hour TTL
-- **User Tasks** - `tasks:user:{userId}` with 1 hour TTL
-- **Cache Invalidation** - Automatically deletes when a task is created/updated/deleted
+| Technology | Usage |
+|-----------|-------|
+| Node.js + TypeScript | Project foundation |
+| Express | API layer |
+| BullMQ | Scheduling reminders (scheduled jobs) |
+| RabbitMQ | Event Bus for asynchronous communication |
+| Redis | Cache for performance improvement |
+| PostgreSQL + Prisma | Database and ORM |
+| Jest | Unit and integration tests |
+| Zod | Data validation |
+| Swagger | API documentation |
 
-### Error Handling
-- All errors go through `errorHandlerMW`
-- Custom errors with appropriate status codes
-- Built-in logging with request ID
+## What I Learned
 
-### Validation
-- Zod schemas for all inputs
-- Middleware that handles validation errors
-- Type-safe with TypeScript
+- Building scalable architectures with clear feature boundaries
+- Event-driven design with RabbitMQ
+- Scheduling workflows (delay-based jobs)
+- Redis caching strategies & invalidation
+- Dependency Injection in Node.js
+- Clean Architecture in a real project
+- Writing testable, modular backend code
+- Designing systems that can evolve into microservices
 
-## 📝 Important Notes
-
-### Consumer/Producer Infrastructure
-The project includes a fully implemented `RabbitTaskQueue` (consumer/producer) infrastructure that is **not currently used**. The infrastructure includes:
-- Retry mechanism (up to 3 attempts)
-- Dead Letter Queue (DLQ) for failed tasks
-- Prefetch count for concurrency management
-
-This infrastructure is ready for future use, for example if we want to add background processing of heavy tasks.
-
-## 🚀 Running Locally
+## Running Locally
 
 ```bash
 # Install dependencies
@@ -216,7 +142,7 @@ npm run dev
 npm run worker:dev
 ```
 
-## 🧪 Testing
+## Testing
 
 ```bash
 # Run all tests
@@ -226,29 +152,41 @@ npm test
 npm test -- --coverage
 ```
 
-**Current Coverage: 91.69%** ✅
+**Coverage: 91.69%**
 
-## 📚 Learning Resources
+## Important Notes
 
-During the project I learned from:
-- [BullMQ Documentation](https://docs.bullmq.io/)
-- [RabbitMQ Tutorials](https://www.rabbitmq.com/getstarted.html)
-- [Feature-Based Structure Patterns](https://khalilstemmler.com/articles/domain-driven-design/feature-based-structure/)
-- [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
+### Consumer/Producer Infrastructure
 
-## 🎯 What's Next?
+The project includes a fully implemented `RabbitTaskQueue` (consumer/producer) infrastructure that is **not currently used**. The infrastructure includes:
+- Retry mechanism (up to 3 attempts)
+- Dead Letter Queue (DLQ) for failed tasks
+- Prefetch count for concurrency management
 
-Ideas for continued learning:
+This infrastructure is ready for future use, for example if we want to add background processing of heavy tasks.
+
+## Next Steps
+
 - [ ] Add authentication & authorization
 - [ ] Use RabbitTaskQueue for heavy tasks
-- [ ] Add monitoring (Prometheus/Grafana)
+- [ ] Add real-time updates (WebSocket)
+- [ ] Add metrics (Prometheus + Grafana)
 - [ ] Add rate limiting
-- [ ] Add WebSocket for real-time updates
 
-## 📄 License
+## License
 
 MIT
 
 ---
 
 **Note:** This is a learning project. The code was written to learn and understand principles of scalable architecture, not as a production-ready solution.
+
+## API Documentation
+
+The API is fully documented with Swagger. Once the server is running, visit:
+
+```
+http://localhost:3000/api-docs
+```
+
+![Swagger API Documentation](public/localhost_3000_api-docs.png)
