@@ -6,6 +6,12 @@ A modular-monolith system demonstrating scalable architecture, queues, caching, 
 
 A task management system that automatically schedules reminders, processes them in background workers, triggers notifications, and keeps high performance using caching and event-driven communication.
 
+## Video Overview
+
+[![Watch a quick system walkthrough](public/Architecture.png)](https://youtu.be/A9F1JrSnX7Q)
+
+Short intro video explaining the modular monolith design, request flow, background workers, and how caching and queues fit together.
+
 ## System Architecture
 
 ### Key Concepts
