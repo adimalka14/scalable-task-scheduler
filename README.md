@@ -165,18 +165,6 @@ The project includes a fully implemented `RabbitTaskQueue` (consumer/producer) i
 
 This infrastructure is ready for future use, for example if we want to add background processing of heavy tasks.
 
-## Next Steps
-
-- [ ] Add authentication & authorization
-- [ ] Use RabbitTaskQueue for heavy tasks
-- [ ] Add real-time updates (WebSocket)
-- [ ] Add metrics (Prometheus + Grafana)
-- [ ] Add rate limiting
-
-## License
-
-MIT
-
 ---
 
 **Note:** This is a learning project. The code was written to learn and understand principles of scalable architecture, not as a production-ready solution.
