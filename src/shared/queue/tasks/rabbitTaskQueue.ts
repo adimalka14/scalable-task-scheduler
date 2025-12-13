@@ -1,4 +1,4 @@
-import { ITaskQueue } from '../../interfaces/ITaskQueue';
+import { ITaskQueue } from '../../interfaces';
 import { getChannel, RABBIT_PREFETCH_COUNT } from '../../config/rabbit';
 import logger from '../../utils/logger';
 
