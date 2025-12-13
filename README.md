@@ -15,7 +15,6 @@ Short intro video explaining the modular monolith design, request flow, backgrou
 ## System Architecture
 
 ### Key Concepts
-
 - **Modular Monolith Architecture** – Each feature is isolated and ready to become a standalone microservice
 - **Event-Driven Communication (RabbitMQ)** – Features communicate asynchronously
 - **Scheduled Jobs (BullMQ)** – Reminder scheduling and delay-based execution
@@ -170,18 +169,6 @@ The project includes a fully implemented `RabbitTaskQueue` (consumer/producer) i
 - Prefetch count for concurrency management
 
 This infrastructure is ready for future use, for example if we want to add background processing of heavy tasks.
-
-## Next Steps
-
-- [ ] Add authentication & authorization
-- [ ] Use RabbitTaskQueue for heavy tasks
-- [ ] Add real-time updates (WebSocket)
-- [ ] Add metrics (Prometheus + Grafana)
-- [ ] Add rate limiting
-
-## License
-
-MIT
 
 ---
 
