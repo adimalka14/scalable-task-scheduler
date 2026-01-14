@@ -124,7 +124,7 @@ export class NotificationController {
 
     async getNotificationsByStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const status = req.params.status as string;
+            const status = req.params.status as NotificationStatus;
 
             const notifications = await this.notificationFacade.getNotificationsByStatus(status);
 

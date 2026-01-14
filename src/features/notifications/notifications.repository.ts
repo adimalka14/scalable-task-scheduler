@@ -1,29 +1,62 @@
 import { Prisma, PrismaClient, Notification as PrismaNotification } from '@prisma/client';
 import { INotificationRepository } from './notifications.interfaces';
-import { CreateNotificationDto, UpdateNotificationDto, Notification } from './notifications.types';
+import { CreateNotificationDto, UpdateNotificationDto, Notification, NotificationType, NotificationStatus } from './notifications.types';
 import { NotFoundError } from '../../shared/config/errors';
 
 export class NotificationRepository implements INotificationRepository {
-    constructor(private prisma: PrismaClient) {}
+    constructor(private prisma: PrismaClient) { }
 
     async create(dto: CreateNotificationDto): Promise<Notification> {
-        const result = (await this.prisma.notification.create({
-            data: {
-                taskId: dto.taskId,
-                type: dto.type,
-                status: dto.status,
-                message: dto.message,
-                sentAt: dto.sentAt,
-            },
-        })) as PrismaNotification;
+        const createData: any = {
+            taskId: dto.taskId,
+            type: dto.type,
+            status: dto.status,
+            message: dto.message,
+        };
 
-        return this.mapPrismaToNotification(result);
+        if (dto.sentAt !== undefined) {
+            createData.sentAt = dto.sentAt;
+        }
+
+        try {
+            const result = (await this.prisma.notification.create({
+                data: createData,
+            })) as PrismaNotification;
+
+            return this.mapPrismaToNotification(result);
+        } catch (error: any) {
+            if (error.code === 'P2002') {
+                const existing = await this.prisma.notification.findFirst({
+                    where: {
+                        taskId: dto.taskId,
+                        type: dto.type,
+                    },
+                    include: {
+                        task: true,
+                    } as Prisma.NotificationInclude,
+                });
+
+                if (existing) {
+                    return this.mapPrismaToNotification(existing);
+                }
+            }
+            throw error;
+        }
     }
 
     async update(id: string, dto: UpdateNotificationDto): Promise<Notification> {
+        const updateData: any = {};
+
+        if (dto.type !== undefined) updateData.type = dto.type;
+        if (dto.status !== undefined) updateData.status = dto.status;
+        if (dto.message !== undefined) updateData.message = dto.message;
+        if (dto.sentAt !== undefined) {
+            updateData.sentAt = dto.sentAt;
+        }
+
         const result = (await this.prisma.notification.update({
             where: { id },
-            data: dto,
+            data: updateData,
         })) as PrismaNotification;
 
         return this.mapPrismaToNotification(result);
@@ -64,7 +97,7 @@ export class NotificationRepository implements INotificationRepository {
         return notifications.map((notification) => this.mapPrismaToNotification(notification));
     }
 
-    async findByStatus(status: string): Promise<Notification[]> {
+    async findByStatus(status: NotificationStatus): Promise<Notification[]> {
         const notifications = await this.prisma.notification.findMany({
             where: { status },
             include: {
@@ -82,8 +115,8 @@ export class NotificationRepository implements INotificationRepository {
         return {
             id: prismaNotification.id,
             taskId: prismaNotification.taskId,
-            type: prismaNotification.type,
-            status: prismaNotification.status,
+            type: prismaNotification.type as NotificationType,
+            status: prismaNotification.status as NotificationStatus,
             message: prismaNotification.message,
             sentAt: prismaNotification.sentAt,
             createdAt: prismaNotification.createdAt,

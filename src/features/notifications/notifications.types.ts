@@ -1,10 +1,20 @@
+export enum NotificationType {
+    TASK_REMINDER = 'TASK_REMINDER',
+}
+
+export enum NotificationStatus {
+    PENDING = 'PENDING',
+    SENT = 'SENT',
+    FAILED = 'FAILED',
+}
+
 export interface Notification {
     id: string;
     taskId: string;
     type: NotificationType;
     status: NotificationStatus;
     message: string;
-    sentAt: Date;
+    sentAt: Date | null;
     createdAt: Date;
 }
 
@@ -13,14 +23,14 @@ export interface CreateNotificationDto {
     type: NotificationType;
     status: NotificationStatus;
     message: string;
-    sentAt: Date;
+    sentAt?: Date | null;
 }
 
 export interface UpdateNotificationDto {
     type?: NotificationType;
     status?: NotificationStatus;
     message?: string;
-    sentAt?: Date;
+    sentAt?: Date | null;
 }
 
 export interface TaskTimedArrivalEvent {
@@ -28,15 +38,3 @@ export interface TaskTimedArrivalEvent {
     userId: string;
     dueDate: string;
 }
-
-export const NOTIFICATION_TYPES = {
-    REMINDER: 'REMINDER',
-} as const;
-
-export const NOTIFICATION_STATUS = {
-    PENDING: 'PENDING',
-    SENT: 'SENT',
-} as const;
-
-export type NotificationType = (typeof NOTIFICATION_TYPES)[keyof typeof NOTIFICATION_TYPES];
-export type NotificationStatus = (typeof NOTIFICATION_STATUS)[keyof typeof NOTIFICATION_STATUS];

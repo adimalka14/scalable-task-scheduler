@@ -1,4 +1,4 @@
-import { CreateNotificationDto, UpdateNotificationDto, Notification } from './notifications.types';
+import { CreateNotificationDto, UpdateNotificationDto, Notification, NotificationStatus } from './notifications.types';
 
 export interface INotificationRepository {
     create(dto: CreateNotificationDto): Promise<Notification>;
@@ -6,7 +6,7 @@ export interface INotificationRepository {
     delete(id: string): Promise<void>;
     findById(id: string): Promise<Notification>;
     findByTaskId(taskId: string): Promise<Notification[]>;
-    findByStatus(status: string): Promise<Notification[]>;
+    findByStatus(status: NotificationStatus): Promise<Notification[]>;
 }
 
 export interface INotificationService {
@@ -15,7 +15,7 @@ export interface INotificationService {
     deleteNotification(id: string): Promise<void>;
     getNotification(id: string): Promise<Notification>;
     getTaskNotifications(taskId: string): Promise<Notification[]>;
-    getNotificationsByStatus(status: string): Promise<Notification[]>;
+    getNotificationsByStatus(status: NotificationStatus): Promise<Notification[]>;
 }
 
 export interface INotificationFacade {
@@ -24,5 +24,5 @@ export interface INotificationFacade {
     deleteNotification(id: string): Promise<void>;
     getNotification(id: string): Promise<Notification>;
     getTaskNotifications(taskId: string): Promise<Notification[]>;
-    getNotificationsByStatus(status: string): Promise<Notification[]>;
+    getNotificationsByStatus(status: NotificationStatus): Promise<Notification[]>;
 }

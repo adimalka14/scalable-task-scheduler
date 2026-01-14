@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,25 +7,69 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum TaskStatus {
+  CREATED
+  SCHEDULED
+  CANCELLED
+  EXECUTING
+  EXECUTED
+  FAILED
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum NotificationType {
+  TASK_REMINDER
+}
+
 model Task {
-  id        String   @id @default(uuid())
-  title     String
-  dueDate   DateTime
-  userId    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String     @id @default(uuid())
+  title        String
+  dueDate      DateTime
+  userId       String
+
+  status       TaskStatus @default(CREATED)
+
+  // Scheduling / execution timestamps
+  scheduledAt  DateTime?  // when the task is intended to be executed (anchor for queue-wait)
+  executingAt  DateTime?
+  executedAt  DateTime?
+  cancelledAt  DateTime?
+
+  // Reliability / debugging
+  attempts     Int        @default(0)
+  maxAttempts  Int        @default(3)
+  lastError    String?
+
+  // Optional: concurrency guard (recommended for idempotency safety)
+  lockToken    String?
+  lockedAt     DateTime?
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
   notifications Notification[]
 }
 
 model Notification {
-  id        String   @id @default(uuid())
+  id        String             @id @default(uuid())
   taskId    String
-  type      String
-  status    String
+
+  type      NotificationType
+  status    NotificationStatus @default(PENDING)
+
   message   String
-  sentAt    DateTime
-  createdAt DateTime @default(now())
+  sentAt    DateTime?
+  createdAt DateTime           @default(now())
 
   task Task @relation(fields: [taskId], references: [id])
+
+  @@unique([taskId, type])
+  @@index([taskId])
+  @@index([status])
 }
+

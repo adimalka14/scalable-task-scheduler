@@ -1,7 +1,7 @@
 import { TaskFacade } from '../tasks.facade';
 import { TaskService } from '../tasks.service';
 import { ISchedulerQueue, IEventBus, ICacheService } from '../../../shared/interfaces';
-import { CreateTaskDto, UpdateTaskDto, Task } from '../tasks.types';
+import { CreateTaskDto, UpdateTaskDto, Task, TaskStatus } from '../tasks.types';
 import { EVENTS } from '../../../shared/queue/queue.constants';
 
 describe('TaskFacade', () => {
@@ -22,6 +22,10 @@ describe('TaskFacade', () => {
             deleteTask: jest.fn(),
             getTask: jest.fn(),
             getUserTasks: jest.fn(),
+            updateStatus: jest.fn(),
+            claimForExecution: jest.fn(),
+            markExecuted: jest.fn(),
+            markPublishFailed: jest.fn(),
         } as any;
 
         mockSchedulerQueue = {
@@ -57,17 +61,35 @@ describe('TaskFacade', () => {
             const createdTask: Task = {
                 id: 'task-1',
                 ...dto,
+                status: TaskStatus.CREATED,
+                scheduledAt: null,
+                executingAt: null,
+                executedAt: null,
+                cancelledAt: null,
+                attempts: 0,
+                maxAttempts: 3,
+                lastError: null,
+                lockToken: null,
+                lockedAt: null,
                 createdAt: new Date(now),
                 updatedAt: new Date(now),
             };
 
+            const scheduledTask: Task = {
+                ...createdTask,
+                status: TaskStatus.SCHEDULED,
+                scheduledAt: new Date(now),
+            };
+
             mockService.createTask.mockResolvedValue(createdTask);
+            mockService.updateStatus.mockResolvedValue(scheduledTask);
             mockSchedulerQueue.scheduleJob.mockResolvedValue();
             mockEventBus.publish.mockResolvedValue();
 
             const result = await facade.createTask(dto);
 
-            expect(result).toEqual(createdTask);
+            expect(result).toEqual(scheduledTask);
+            expect(mockService.updateStatus).toHaveBeenCalledWith('task-1', TaskStatus.SCHEDULED);
             expect(mockSchedulerQueue.scheduleJob).toHaveBeenCalledWith(
                 EVENTS.SCHEDULER_QUEUE.TASK_REMINDER,
                 EVENTS.SCHEDULER_QUEUE.TASK_REMINDER,
@@ -91,16 +113,33 @@ describe('TaskFacade', () => {
                 title: 'Test Task',
                 dueDate: new Date('2020-01-01T10:00:00Z'),
                 userId: 'user-123',
+                status: TaskStatus.CREATED,
+                scheduledAt: null,
+                executingAt: null,
+                executedAt: null,
+                cancelledAt: null,
+                attempts: 0,
+                maxAttempts: 3,
+                lastError: null,
+                lockToken: null,
+                lockedAt: null,
                 createdAt: new Date(),
                 updatedAt: new Date(),
             };
 
+            const scheduledTask: Task = {
+                ...expectedTask,
+                status: TaskStatus.SCHEDULED,
+                scheduledAt: new Date(),
+            };
+
             mockService.createTask.mockResolvedValue(expectedTask);
+            mockService.updateStatus.mockResolvedValue(scheduledTask);
             mockEventBus.publish.mockResolvedValue();
 
             const result = await facade.createTask(dto);
 
-            expect(result).toEqual(expectedTask);
+            expect(result).toEqual(scheduledTask);
             expect(mockSchedulerQueue.scheduleJob).not.toHaveBeenCalled();
             // createTask doesn't publish events, only updateTask and deleteTask do
         });
@@ -117,16 +156,33 @@ describe('TaskFacade', () => {
             const createdTask: Task = {
                 id: 'task-2',
                 ...dto,
+                status: TaskStatus.CREATED,
+                scheduledAt: null,
+                executingAt: null,
+                executedAt: null,
+                cancelledAt: null,
+                attempts: 0,
+                maxAttempts: 3,
+                lastError: null,
+                lockToken: null,
+                lockedAt: null,
                 createdAt: new Date(now),
                 updatedAt: new Date(now),
             };
 
+            const scheduledTask: Task = {
+                ...createdTask,
+                status: TaskStatus.SCHEDULED,
+                scheduledAt: new Date(now),
+            };
+
             mockService.createTask.mockResolvedValue(createdTask);
+            mockService.updateStatus.mockResolvedValue(scheduledTask);
             mockEventBus.publish.mockResolvedValue();
 
             const result = await facade.createTask(dto);
 
-            expect(result).toEqual(createdTask);
+            expect(result).toEqual(scheduledTask);
             expect(mockSchedulerQueue.scheduleJob).not.toHaveBeenCalled();
         });
 
@@ -141,6 +197,16 @@ describe('TaskFacade', () => {
                 title: 'Updated Task',
                 dueDate: futureDate,
                 userId: 'user-3',
+                status: TaskStatus.SCHEDULED,
+                scheduledAt: new Date(now),
+                executingAt: null,
+                executedAt: null,
+                cancelledAt: null,
+                attempts: 0,
+                maxAttempts: 3,
+                lastError: null,
+                lockToken: null,
+                lockedAt: null,
                 createdAt: new Date(now),
                 updatedAt: new Date(now),
             };
@@ -179,6 +245,16 @@ describe('TaskFacade', () => {
                 title: 'Updated Task',
                 dueDate: new Date('2024-01-01T10:00:00Z'),
                 userId: 'user-123',
+                status: TaskStatus.SCHEDULED,
+                scheduledAt: new Date(),
+                executingAt: null,
+                executedAt: null,
+                cancelledAt: null,
+                attempts: 0,
+                maxAttempts: 3,
+                lastError: null,
+                lockToken: null,
+                lockedAt: null,
                 createdAt: new Date(),
                 updatedAt: new Date(),
             };
@@ -222,6 +298,16 @@ describe('TaskFacade', () => {
                 title: 'Test Task',
                 dueDate: new Date('2024-01-01T10:00:00Z'),
                 userId: 'user-123',
+                status: TaskStatus.SCHEDULED,
+                scheduledAt: new Date(),
+                executingAt: null,
+                executedAt: null,
+                cancelledAt: null,
+                attempts: 0,
+                maxAttempts: 3,
+                lastError: null,
+                lockToken: null,
+                lockedAt: null,
                 createdAt: new Date(),
                 updatedAt: new Date(),
             };
@@ -244,6 +330,16 @@ describe('TaskFacade', () => {
                     title: 'Task 1',
                     dueDate: new Date('2024-01-01T10:00:00Z'),
                     userId,
+                    status: TaskStatus.SCHEDULED,
+                    scheduledAt: new Date(),
+                    executingAt: null,
+                    executedAt: null,
+                    cancelledAt: null,
+                    attempts: 0,
+                    maxAttempts: 3,
+                    lastError: null,
+                    lockToken: null,
+                    lockedAt: null,
                     createdAt: new Date(),
                     updatedAt: new Date(),
                 },
@@ -252,6 +348,16 @@ describe('TaskFacade', () => {
                     title: 'Task 2',
                     dueDate: new Date('2024-01-02T10:00:00Z'),
                     userId,
+                    status: TaskStatus.SCHEDULED,
+                    scheduledAt: new Date(),
+                    executingAt: null,
+                    executedAt: null,
+                    cancelledAt: null,
+                    attempts: 0,
+                    maxAttempts: 3,
+                    lastError: null,
+                    lockToken: null,
+                    lockedAt: null,
                     createdAt: new Date(),
                     updatedAt: new Date(),
                 },

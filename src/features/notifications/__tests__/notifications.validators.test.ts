@@ -11,7 +11,7 @@ describe('Notification Validators', () => {
         it('should validate valid notification data', () => {
             const validData = {
                 taskId: '123e4567-e89b-12d3-a456-426614174000',
-                type: 'REMINDER',
+                type: 'TASK_REMINDER',
                 status: 'PENDING',
                 message: 'Task due soon',
             };
@@ -36,7 +36,7 @@ describe('Notification Validators', () => {
 
             expect(result.success).toBe(false);
             if (!result.success) {
-                expect(result.error.issues[0].message).toBe('Type must be one of: REMINDER');
+                expect(result.error.issues[0].message).toBe('Type must be one of: TASK_REMINDER');
             }
         });
 
@@ -52,7 +52,7 @@ describe('Notification Validators', () => {
 
             expect(result.success).toBe(false);
             if (!result.success) {
-                expect(result.error.issues[0].message).toBe('Status must be one of: PENDING, SENT');
+                expect(result.error.issues[0].message).toBe('Type must be one of: TASK_REMINDER');
             }
         });
 
@@ -68,14 +68,14 @@ describe('Notification Validators', () => {
 
             expect(result.success).toBe(false);
             if (!result.success) {
-                expect(result.error.issues[0].message).toBe('Status must be one of: PENDING, SENT');
+                expect(result.error.issues[0].message).toBe('Type must be one of: TASK_REMINDER');
             }
         });
 
         it('should reject empty message', () => {
             const invalidData = {
                 taskId: '123e4567-e89b-12d3-a456-426614174000',
-                type: 'REMINDER',
+                type: 'TASK_REMINDER',
                 status: 'PENDING',
                 message: '',
             };
@@ -91,7 +91,7 @@ describe('Notification Validators', () => {
         it('should reject message too long', () => {
             const invalidData = {
                 taskId: '123e4567-e89b-12d3-a456-426614174000',
-                type: 'REMINDER',
+                type: 'TASK_REMINDER',
                 status: 'PENDING',
                 message: 'a'.repeat(501),
             };
@@ -107,7 +107,7 @@ describe('Notification Validators', () => {
         it('should reject invalid task ID', () => {
             const invalidData = {
                 taskId: 'invalid-uuid',
-                type: 'REMINDER',
+                type: 'TASK_REMINDER',
                 status: 'PENDING',
                 message: 'Task due soon',
             };
@@ -124,7 +124,7 @@ describe('Notification Validators', () => {
     describe('updateNotificationSchema', () => {
         it('should validate valid update data', () => {
             const validData = {
-                type: 'REMINDER',
+                type: 'TASK_REMINDER',
                 status: 'SENT',
                 message: 'Task overdue',
             };
@@ -170,7 +170,7 @@ describe('Notification Validators', () => {
 
             expect(result.success).toBe(false);
             if (!result.success) {
-                expect(result.error.issues[0].message).toBe('Type must be one of: REMINDER');
+                expect(result.error.issues[0].message).toBe('Type must be one of: TASK_REMINDER');
             }
         });
     });
@@ -254,7 +254,7 @@ describe('Notification Validators', () => {
 
             expect(result.success).toBe(false);
             if (!result.success) {
-                expect(result.error.issues[0].message).toBe('Status must be one of: PENDING, SENT');
+                expect(result.error.issues[0].message).toBe('Status must be one of: PENDING, SENT, FAILED');
             }
         });
     });

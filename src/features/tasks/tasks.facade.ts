@@ -1,5 +1,5 @@
 import { ITaskFacade, ITaskService } from './tasks.interfaces';
-import { CreateTaskDto, UpdateTaskDto, Task } from './tasks.types';
+import { CreateTaskDto, UpdateTaskDto, Task, TaskStatus } from './tasks.types';
 import { ISchedulerQueue, IEventBus, ICacheService } from '../../shared/interfaces';
 import { EVENTS } from '../../shared/queue/queue.constants';
 import logger from '../../shared/utils/logger';
@@ -20,12 +20,15 @@ export class TaskFacade implements ITaskFacade {
 
     async createTask(dto: CreateTaskDto): Promise<Task> {
         const task = await this.service.createTask(dto);
+        
+        // Schedule the reminder and update status to SCHEDULED
         await this.scheduleTaskReminder(task, dto.dueDate);
+        const scheduledTask = await this.service.updateStatus(task.id, TaskStatus.SCHEDULED);
         
         // Invalidate user tasks cache (non-blocking)
         await this.safeCacheDelete(CACHE_KEYS.userTasks(task.userId));
         
-        return task;
+        return scheduledTask;
     }
 
     async updateTask(id: string, dto: UpdateTaskDto): Promise<Task> {
@@ -55,14 +58,24 @@ export class TaskFacade implements ITaskFacade {
     async deleteTask(id: string): Promise<void> {
         // Try to get task before deletion to invalidate user cache
         let userId: string | undefined;
+        let task: Task | undefined;
         try {
-            const task = await this.service.getTask(id);
+            task = await this.service.getTask(id);
             userId = task.userId;
         } catch (error) {
             logger.debug('TASK_FACADE', 'Task not found before deletion, continuing', { taskId: id });
         }
         
+        // Cancel reminder and mark task as CANCELLED before deletion
         await this.cancelTaskReminder(id);
+        if (task && task.status !== TaskStatus.CANCELLED) {
+            try {
+                await this.service.updateStatus(id, TaskStatus.CANCELLED);
+            } catch (error) {
+                logger.warn('TASK_FACADE', 'Failed to update task status to CANCELLED', { taskId: id, error });
+            }
+        }
+        
         await this.service.deleteTask(id);
         await this.eventBus.publish(EVENTS.EVENT_BUS_QUEUE.TASK_DELETED, {
             taskId: id,

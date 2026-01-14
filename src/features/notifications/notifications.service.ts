@@ -1,5 +1,5 @@
 import { INotificationService, INotificationRepository } from './notifications.interfaces';
-import { CreateNotificationDto, UpdateNotificationDto, Notification } from './notifications.types';
+import { CreateNotificationDto, UpdateNotificationDto, Notification, NotificationStatus } from './notifications.types';
 
 export class NotificationService implements INotificationService {
     constructor(private repository: INotificationRepository) {}
@@ -24,7 +24,7 @@ export class NotificationService implements INotificationService {
         return this.repository.findByTaskId(taskId);
     }
 
-    async getNotificationsByStatus(status: string): Promise<Notification[]> {
+    async getNotificationsByStatus(status: NotificationStatus): Promise<Notification[]> {
         return this.repository.findByStatus(status);
     }
 } 

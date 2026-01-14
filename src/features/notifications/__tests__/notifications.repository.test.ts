@@ -1,6 +1,6 @@
 import { NotificationRepository } from '../notifications.repository';
 import { PrismaClient } from '@prisma/client';
-import { CreateNotificationDto, UpdateNotificationDto, Notification } from '../notifications.types';
+import { CreateNotificationDto, UpdateNotificationDto, Notification, NotificationStatus, NotificationType } from '../notifications.types';
 
 describe('NotificationRepository', () => {
     let repository: NotificationRepository;
@@ -24,8 +24,8 @@ describe('NotificationRepository', () => {
         it('should create notification successfully', async () => {
             const dto: CreateNotificationDto = {
                 taskId: 'task-123',
-                type: 'REMINDER',
-                status: 'PENDING',
+                type: NotificationType.TASK_REMINDER,
+                status: NotificationStatus.PENDING,
                 message: 'Task due soon',
                 sentAt: new Date('2024-01-01T10:00:00Z'),
             };
@@ -49,22 +49,28 @@ describe('NotificationRepository', () => {
             expect(result).toEqual({
                 id: 'notification-123',
                 taskId: 'task-123',
-                type: 'REMINDER',
-                status: 'PENDING',
+                type: NotificationType.TASK_REMINDER,
+                status: NotificationStatus.PENDING,
                 message: 'Task due soon',
                 sentAt: new Date('2024-01-01T10:00:00Z'),
                 createdAt: now,
             });
             expect(mockPrisma.notification.create).toHaveBeenCalledWith({
-                data: dto,
+                data: {
+                    taskId: dto.taskId,
+                    type: dto.type,
+                    status: dto.status,
+                    message: dto.message,
+                    sentAt: dto.sentAt,
+                },
             });
         });
 
         it('should throw error when prisma fails', async () => {
             const dto: CreateNotificationDto = {
                 taskId: 'task-123',
-                type: 'REMINDER',
-                status: 'PENDING',
+                type: NotificationType.TASK_REMINDER,
+                status: NotificationStatus.PENDING,
                 message: 'Task due soon',
                 sentAt: new Date('2024-01-01T10:00:00Z'),
             };
@@ -79,14 +85,14 @@ describe('NotificationRepository', () => {
     describe('update', () => {
         it('should update notification successfully', async () => {
             const notificationId = 'notification-123';
-            const dto: UpdateNotificationDto = { status: 'SENT' };
+            const dto: UpdateNotificationDto = { status: NotificationStatus.SENT };
             const now = new Date();
 
             const prismaNotification = {
                 id: notificationId,
                 taskId: 'task-123',
-                type: 'REMINDER',
-                status: 'SENT',
+                type: NotificationType.TASK_REMINDER,
+                status: NotificationStatus.SENT,
                 message: 'Task due soon',
                 sentAt: new Date('2024-01-01T10:00:00Z'),
                 createdAt: now,
@@ -99,15 +105,49 @@ describe('NotificationRepository', () => {
             expect(result).toEqual({
                 id: notificationId,
                 taskId: 'task-123',
-                type: 'REMINDER',
-                status: 'SENT',
+                type: NotificationType.TASK_REMINDER,
+                status: NotificationStatus.SENT,
                 message: 'Task due soon',
                 sentAt: new Date('2024-01-01T10:00:00Z'),
                 createdAt: now,
             });
             expect(mockPrisma.notification.update).toHaveBeenCalledWith({
                 where: { id: notificationId },
-                data: dto,
+                data: {
+                    status: dto.status,
+                },
+            });
+        });
+
+        it('should update notification without sentAt when not provided', async () => {
+            const notificationId = 'notification-123';
+            const dto: UpdateNotificationDto = {
+                status: NotificationStatus.SENT,
+                message: 'Updated message'
+            };
+            const now = new Date();
+
+            const prismaNotification = {
+                id: notificationId,
+                taskId: 'task-123',
+                type: NotificationType.TASK_REMINDER,
+                status: NotificationStatus.SENT,
+                message: 'Updated message',
+                sentAt: new Date('2024-01-01T10:00:00Z'),
+                createdAt: now,
+            };
+
+            (mockPrisma.notification.update as jest.Mock).mockResolvedValue(prismaNotification);
+
+            const result = await repository.update(notificationId, dto);
+
+            expect(result.message).toBe('Updated message');
+            expect(mockPrisma.notification.update).toHaveBeenCalledWith({
+                where: { id: notificationId },
+                data: {
+                    status: dto.status,
+                    message: dto.message,
+                },
             });
         });
     });
@@ -134,8 +174,8 @@ describe('NotificationRepository', () => {
             const prismaNotification = {
                 id: notificationId,
                 taskId: 'task-123',
-                type: 'REMINDER',
-                status: 'PENDING',
+                type: NotificationType.TASK_REMINDER,
+                status: NotificationStatus.PENDING,
                 message: 'Task due soon',
                 sentAt: new Date('2024-01-01T10:00:00Z'),
                 createdAt: now,
@@ -149,8 +189,8 @@ describe('NotificationRepository', () => {
             expect(result).toEqual({
                 id: notificationId,
                 taskId: 'task-123',
-                type: 'REMINDER',
-                status: 'PENDING',
+                type: NotificationType.TASK_REMINDER,
+                status: NotificationStatus.PENDING,
                 message: 'Task due soon',
                 sentAt: new Date('2024-01-01T10:00:00Z'),
                 createdAt: now,
@@ -177,8 +217,8 @@ describe('NotificationRepository', () => {
                 {
                     id: 'notification-1',
                     taskId,
-                    type: 'REMINDER',
-                    status: 'PENDING',
+                    type: NotificationType.TASK_REMINDER,
+                    status: NotificationStatus.PENDING,
                     message: 'Task due soon',
                     sentAt: new Date('2024-01-01T10:00:00Z'),
                     createdAt: now,
@@ -187,8 +227,8 @@ describe('NotificationRepository', () => {
                 {
                     id: 'notification-2',
                     taskId,
-                    type: 'overdue',
-                    status: 'SENT',
+                    type: NotificationType.TASK_REMINDER,
+                    status: NotificationStatus.SENT,
                     message: 'Task overdue',
                     sentAt: new Date('2024-01-02T10:00:00Z'),
                     createdAt: now,
@@ -211,14 +251,14 @@ describe('NotificationRepository', () => {
 
     describe('findByStatus', () => {
         it('should find notifications by status successfully', async () => {
-            const status = 'pending';
+            const status = NotificationStatus.PENDING;
             const now = new Date();
 
             const prismaNotifications = [
                 {
                     id: 'notification-1',
                     taskId: 'task-123',
-                    type: 'REMINDER',
+                    type: NotificationType.TASK_REMINDER,
                     status,
                     message: 'Task due soon',
                     sentAt: new Date('2024-01-01T10:00:00Z'),

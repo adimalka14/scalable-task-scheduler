@@ -5,7 +5,7 @@ import { NotificationFacade } from '../notifications.facade';
 import { NotificationController } from '../notifications.controller';
 import { PrismaClient } from '@prisma/client';
 import { IEventBus } from '../../../shared/interfaces';
-import { NOTIFICATION_TYPES, NOTIFICATION_STATUS } from '../notifications.types';
+import { NotificationType, NotificationStatus } from '../notifications.types';
 
 describe('NotificationsModule', () => {
     let module: Awaited<ReturnType<typeof createNotificationsModule>>;

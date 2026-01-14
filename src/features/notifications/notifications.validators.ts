@@ -1,26 +1,26 @@
 import { z } from 'zod';
-import { NOTIFICATION_TYPES, NOTIFICATION_STATUS } from './notifications.types';
+import { NotificationType, NotificationStatus } from './notifications.types';
 
 export const createNotificationSchema = z.object({
     taskId: z.string().uuid('Invalid task ID'),
-    type: z.enum([NOTIFICATION_TYPES.REMINDER], {
-        message: `Type must be one of: ${Object.values(NOTIFICATION_TYPES).join(', ')}`,
+    type: z.nativeEnum(NotificationType, {
+        message: `Type must be one of: ${Object.values(NotificationType).join(', ')}`,
     }),
-    status: z.enum([NOTIFICATION_STATUS.PENDING, NOTIFICATION_STATUS.SENT], {
-        message: `Status must be one of: ${Object.values(NOTIFICATION_STATUS).join(', ')}`,
+    status: z.nativeEnum(NotificationStatus, {
+        message: `Status must be one of: ${Object.values(NotificationStatus).join(', ')}`,
     }),
     message: z.string().min(1, 'Message is required').max(500, 'Message too long'),
 });
 
 export const updateNotificationSchema = z.object({
     type: z
-        .enum([NOTIFICATION_TYPES.REMINDER], {
-            message: `Type must be one of: ${Object.values(NOTIFICATION_TYPES).join(', ')}`,
+        .nativeEnum(NotificationType, {
+            message: `Type must be one of: ${Object.values(NotificationType).join(', ')}`,
         })
         .optional(),
     status: z
-        .enum([NOTIFICATION_STATUS.PENDING, NOTIFICATION_STATUS.SENT], {
-            message: `Status must be one of: ${Object.values(NOTIFICATION_STATUS).join(', ')}`,
+        .nativeEnum(NotificationStatus, {
+            message: `Status must be one of: ${Object.values(NotificationStatus).join(', ')}`,
         })
         .optional(),
     message: z.string().min(1, 'Message is required').max(500, 'Message too long').optional(),
@@ -35,7 +35,7 @@ export const taskIdSchema = z.object({
 });
 
 export const statusSchema = z.object({
-    status: z.enum([NOTIFICATION_STATUS.PENDING, NOTIFICATION_STATUS.SENT], {
-        message: `Status must be one of: ${Object.values(NOTIFICATION_STATUS).join(', ')}`,
+    status: z.nativeEnum(NotificationStatus, {
+        message: `Status must be one of: ${Object.values(NotificationStatus).join(', ')}`,
     }),
 });

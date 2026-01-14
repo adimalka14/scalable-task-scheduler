@@ -1,18 +1,26 @@
 import type { Redis } from 'ioredis';
-
 import { ICacheService } from '../interfaces';
+import { metricsService } from '../metrics/metrics.service';
+
 
 export class RedisCacheService implements ICacheService {
     constructor(
         private enabled: boolean,
         private redis: Redis,
-    ) {}
+    ) { }
 
     async get<T>(key: string): Promise<T | null> {
         if (!this.enabled) return null;
 
         const value = await this.redis.get(key);
-        return value ? (JSON.parse(value) as T) : null;
+
+        if (value) {
+            metricsService.recordCacheHit();
+            return JSON.parse(value) as T;
+        } else {
+            metricsService.recordCacheMiss();
+            return null;
+        }
     }
 
     async set(key: string, value: any, ttl?: number): Promise<void> {
@@ -31,3 +39,4 @@ export class RedisCacheService implements ICacheService {
         await this.redis.del(key);
     }
 }
+
