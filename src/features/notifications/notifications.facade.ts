@@ -57,9 +57,6 @@ export class NotificationFacade implements INotificationFacade {
             message: notification.message,
         });
 
-        logger.info('NOTIFICATION_FACADE', 'Notification facade created notification successfully', {
-            notificationId: notification.id,
-        });
         return notification;
     }
 
@@ -74,19 +71,12 @@ export class NotificationFacade implements INotificationFacade {
             message: notification.message,
         });
 
-        logger.info('NOTIFICATION_FACADE', 'Notification facade updated notification successfully', {
-            notificationId: id,
-        });
         return notification;
     }
 
     async deleteNotification(id: string): Promise<void> {
         await this.service.deleteNotification(id);
         await this.eventBus.publish(EVENTS.EVENT_BUS_QUEUE.NOTIFICATION_DELETED, {
-            notificationId: id,
-        });
-
-        logger.info('NOTIFICATION_FACADE', 'Notification facade deleted notification successfully', {
             notificationId: id,
         });
     }

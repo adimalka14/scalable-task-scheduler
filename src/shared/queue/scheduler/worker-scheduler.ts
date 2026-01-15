@@ -1,5 +1,5 @@
 import { Worker } from 'bullmq';
-import redis from '../../config/cache.config';
+import type { Redis } from 'ioredis';
 import logger from '../../utils/logger';
 
 export type JobHandler<T = any> = (data: T) => Promise<void>;
@@ -14,7 +14,10 @@ export interface WorkerJobConfig {
 export class QueueWorker {
     private workers: Worker[] = [];
 
-    constructor(private readonly jobs: WorkerJobConfig[]) {}
+    constructor(
+        private readonly jobs: WorkerJobConfig[],
+        private readonly redis: Redis
+    ) { }
 
     run() {
         const grouped = this.groupByQueue();
@@ -47,7 +50,7 @@ export class QueueWorker {
                 },
                 {
                     concurrency,
-                    connection: redis,
+                    connection: this.redis,
                 },
             );
 

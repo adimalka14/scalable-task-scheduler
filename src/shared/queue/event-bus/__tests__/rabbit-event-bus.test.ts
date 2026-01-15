@@ -1,11 +1,5 @@
 import { Channel } from 'amqplib';
 import { RabbitEventBus } from '../rabbit-event-bus';
-import { getChannel } from '../../../config/rabbit';
-
-jest.mock('../../../config/rabbit', () => ({
-    getChannel: jest.fn(),
-    RABBIT_PREFETCH_COUNT: 5,
-}));
 
 const mockPublish = jest.fn();
 const mockAssertExchange = jest.fn();
@@ -16,23 +10,25 @@ const mockBindQueue = jest.fn();
 const mockAssertQueue = jest.fn().mockResolvedValue({ queue: 'mockQueue' });
 const prefetch = jest.fn();
 
-(getChannel as jest.Mock).mockResolvedValue({
-    publish: mockPublish,
-    assertExchange: mockAssertExchange,
-    consume: mockConsume,
-    ack: mockAck,
-    nack: mockNack,
-    bindQueue: mockBindQueue,
-    assertQueue: mockAssertQueue,
-    prefetch,
-} as unknown as Channel);
+const mockRabbitConnection = {
+    getChannel: jest.fn().mockResolvedValue({
+        publish: mockPublish,
+        assertExchange: mockAssertExchange,
+        consume: mockConsume,
+        ack: mockAck,
+        nack: mockNack,
+        bindQueue: mockBindQueue,
+        assertQueue: mockAssertQueue,
+        prefetch,
+    } as unknown as Channel),
+};
 
 describe('RabbitEventBus', () => {
     let eventBus: RabbitEventBus;
 
     beforeEach(() => {
         jest.clearAllMocks();
-        eventBus = new RabbitEventBus('event-bus');
+        eventBus = new RabbitEventBus('event-bus', mockRabbitConnection as any);
     });
 
     it('should publish event with correct payload', async () => {

@@ -1,15 +1,17 @@
 import { Queue, JobsOptions } from 'bullmq';
+import type { Redis } from 'ioredis';
 import { ISchedulerQueue } from '../../interfaces';
-import redis from '../../config/cache.config';
 import logger from '../../utils/logger';
 
 export class BullScheduler implements ISchedulerQueue {
     private queues: Map<string, Queue> = new Map();
 
+    constructor(private redis: Redis) { }
+
     private getQueue(name: string): Queue {
         if (!this.queues.has(name)) {
             const queue = new Queue(name, {
-                connection: redis,
+                connection: this.redis,
             });
             this.queues.set(name, queue);
             logger.info('QUEUE', `Created queue: ${name}`);

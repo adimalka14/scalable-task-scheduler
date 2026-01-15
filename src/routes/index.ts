@@ -23,10 +23,9 @@ export function createRoutes(container: any) {
      *               example: "# HELP http_request_duration_seconds Duration of HTTP requests in seconds..."
      */
     router.get('/metrics', async (req, res) => {
-        const { metricsService } = await import('../shared/metrics/metrics.service');
         try {
-            res.set('Content-Type', metricsService.register.contentType);
-            res.end(await metricsService.register.metrics());
+            res.set('Content-Type', container.metricsService.register.contentType);
+            res.end(await container.metricsService.register.metrics());
         } catch (error) {
             res.status(500).send(error);
         }
@@ -70,18 +69,51 @@ export function createRoutes(container: any) {
      * /readiness:
      *   get:
      *     summary: Readiness check endpoint
+     *     description: Checks if all dependencies (database, Redis, RabbitMQ) are healthy
      *     tags: [Health]
      *     responses:
      *       200:
      *         description: Service is ready (all dependencies healthy)
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: object
+     *               properties:
+     *                 success:
+     *                   type: boolean
+     *                   example: true
+     *                 dependencies:
+     *                   type: object
+     *                   properties:
+     *                     database:
+     *                       type: string
+     *                       example: "healthy"
+     *                     redis:
+     *                       type: string
+     *                       example: "healthy"
+     *                     rabbitmq:
+     *                       type: string
+     *                       example: "healthy"
      *       503:
      *         description: Service is not ready (one or more dependencies unhealthy)
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: object
+     *               properties:
+     *                 success:
+     *                   type: boolean
+     *                   example: false
+     *                 dependencies:
+     *                   type: object
+     *                 errors:
+     *                   type: array
+     *                   items:
+     *                     type: string
+     *                   example: ["database: connection timeout"]
      */
     router.get('/readiness', async (req, res) => {
-        const { ReadinessCheck } = await import('../shared/health/readiness');
-        const readinessCheck = new ReadinessCheck();
-
-        const result = await readinessCheck.check();
+        const result = await container.healthService.check();
         const statusCode = result.success ? 200 : 503;
 
         res.status(statusCode).json(result);
@@ -90,3 +122,4 @@ export function createRoutes(container: any) {
     return router;
 
 }
+

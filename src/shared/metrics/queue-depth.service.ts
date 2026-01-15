@@ -1,11 +1,14 @@
-import { PrismaClient, TaskStatus } from '@prisma/client';
-import { metricsService } from './metrics.service';
+import { PrismaClient } from '@prisma/client';
+import type { MetricsService } from './metrics.service';
 import logger from '../utils/logger';
 
 export class QueueDepthService {
     private intervalParams: NodeJS.Timeout | null = null;
 
-    constructor(private prisma: PrismaClient) { }
+    constructor(
+        private prisma: PrismaClient,
+        private metricsService: MetricsService
+    ) { }
 
     public startQueueDepthTracking(intervalMs: number = 15000) {
         if (this.intervalParams) {
@@ -44,9 +47,8 @@ export class QueueDepthService {
 
             // Map results
             counts.forEach((item) => {
-                metricsService.taskQueueDepth.set({ status: item.status }, item._count.status);
+                this.metricsService.taskQueueDepth.set({ status: item.status }, item._count.status);
             });
-
         } catch (error) {
             logger.error('METRICS', 'Failed to update queue depth', { error });
         }

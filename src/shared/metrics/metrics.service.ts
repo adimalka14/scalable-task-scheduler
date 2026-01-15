@@ -97,4 +97,3 @@ export class MetricsService {
     }
 }
 
-export const metricsService = new MetricsService();

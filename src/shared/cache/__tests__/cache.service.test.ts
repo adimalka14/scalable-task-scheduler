@@ -6,8 +6,13 @@ const redisMock = {
     del: jest.fn(),
 };
 
+const metricsServiceMock = {
+    recordCacheHit: jest.fn(),
+    recordCacheMiss: jest.fn(),
+};
+
 describe('RedisCacheService', () => {
-    const service = new RedisCacheService(true, redisMock as any);
+    const service = new RedisCacheService(true, redisMock as any, metricsServiceMock as any);
 
     it('should get from cache', async () => {
         redisMock.get.mockResolvedValueOnce(JSON.stringify('test'));
@@ -26,19 +31,19 @@ describe('RedisCacheService', () => {
     });
 
     it('should return null if disabled on get', async () => {
-        const disabledService = new RedisCacheService(false, redisMock as any);
+        const disabledService = new RedisCacheService(false, redisMock as any, metricsServiceMock as any);
         const result = await disabledService.get('key');
         expect(result).toBeNull();
     });
 
     it('should not call set if disabled', async () => {
-        const disabledService = new RedisCacheService(false, redisMock as any);
+        const disabledService = new RedisCacheService(false, redisMock as any, metricsServiceMock as any);
         await disabledService.set('key', 'value');
         expect(redisMock.set).not.toHaveBeenCalled();
     });
 
     it('should not call del if disabled', async () => {
-        const disabledService = new RedisCacheService(false, redisMock as any);
+        const disabledService = new RedisCacheService(false, redisMock as any, metricsServiceMock as any);
         await disabledService.del('key');
         expect(redisMock.del).not.toHaveBeenCalled();
     });

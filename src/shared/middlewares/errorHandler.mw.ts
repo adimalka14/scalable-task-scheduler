@@ -1,38 +1,62 @@
 import { Request, Response, NextFunction } from 'express';
-import { ReasonPhrases, StatusCodes } from 'http-status-codes';
+import { StatusCodes } from 'http-status-codes';
+import { ZodError } from 'zod';
+import { ApiError, ValidationError, InternalServerError } from '../errors/api-error';
+import { getTraceContext } from './trace-context.mw';
 import logger from '../utils/logger';
-import { BaseAppError } from '../config/errors';
 
-export function errorHandlerMW(err: any, req: Request, res: Response, next: NextFunction) {
-    // Detect BaseAppError via .status property
-    const isBaseAppError = err instanceof BaseAppError || (err.status && typeof err.status === 'number');
-    const statusCode = isBaseAppError ? err.status : StatusCodes.INTERNAL_SERVER_ERROR;
+/**
+ * Global error handler middleware
+ * 
+ * Catches all errors, converts them to ApiError format,
+ * adds trace context, and returns consistent JSON response
+ */
+export function errorHandlerMW(err: Error, req: Request, res: Response, next: NextFunction) {
+    // Get trace context for error response
+    const traceCtx = getTraceContext();
+    const requestId = req.id || 'unknown';
+    const traceId = traceCtx?.traceId;
 
-    // Extract contextual metadata if present
-    const contextualMetadata: any = {
-        route: req.originalUrl,
-        method: req.method,
-    };
+    let apiError: ApiError;
 
-    // Add contextual metadata from error if available
-    if (err.taskId) contextualMetadata.taskId = err.taskId;
-    if (err.notificationId) contextualMetadata.notificationId = err.notificationId;
-    if (err.userId) contextualMetadata.userId = err.userId;
+    // Convert different error types to ApiError
+    if (err instanceof ApiError) {
+        // Already an ApiError, use as-is
+        apiError = err;
+    } else if (err instanceof ZodError) {
+        // Zod validation error
+        apiError = new ValidationError(
+            'Request validation failed',
+            {
+                issues: err.issues.map((issue) => ({
+                    path: issue.path.join('.'),
+                    message: issue.message,
+                })),
+            }
+        );
+    } else {
+        // Unknown error - wrap in InternalServerError
+        apiError = new InternalServerError(
+            err.message || 'An unexpected error occurred',
+            process.env.NODE_ENV === 'development' ? { stack: err.stack } : undefined
+        );
+    }
 
-    // Single structured error log
-    logger.error((req.headers['x-request-id'] as string) || 'UNKNOWN', err.message || 'Unknown error', {
-        error: {
-            name: err.name || 'Error',
-            message: err.message || 'Something went wrong',
-            status: statusCode,
+    // Log the error (only errors, not warnings for client errors)
+    if (apiError.statusCode >= StatusCodes.INTERNAL_SERVER_ERROR) {
+        // Server errors (5xx) - log as ERROR
+        logger.error(requestId, apiError.message, {
+            code: apiError.code,
+            statusCode: apiError.statusCode,
+            details: apiError.details,
             stack: err.stack,
-            ...contextualMetadata,
-        },
-    });
+        });
+    } else {
+        // Client errors (4xx) - already logged by smart logging if slow
+        // No need to log again here
+    }
 
-    // Uniform JSON response
-    res.status(statusCode).json({
-        error: err.name || ReasonPhrases.INTERNAL_SERVER_ERROR,
-        message: err.message || 'Something went wrong',
-    });
+    // Send error response
+    const response = apiError.toResponse(requestId, traceId);
+    res.status(apiError.statusCode).json(response);
 }

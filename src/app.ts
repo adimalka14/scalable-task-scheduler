@@ -7,10 +7,11 @@ import swaggerJsdoc from 'swagger-jsdoc';
 import { NODE_ENV, PORT } from './shared/config/env.config';
 import { swaggerOptions } from './shared/config/swagger';
 import logger from './shared/utils/logger';
-import { connectDB } from './shared/config/db.config';
 import { initContainer, container } from './container';
 
-import { errorHandlerMW, requestIdMW, logApiMW, metricsMW } from './shared/middlewares';
+import { errorHandlerMW, requestIdMW } from './shared/middlewares';
+import { createMetricsMW } from './shared/middlewares/metrics.mw';
+import { traceContextMW } from './shared/middlewares/trace-context.mw';
 
 import { createRoutes } from './routes';
 
@@ -20,9 +21,7 @@ app.use(cors());
 app.use(helmet());
 //app.use(generalLimiterMW);
 app.use(requestIdMW);
-app.use(metricsMW);
-app.use(logApiMW);
-
+app.use(traceContextMW); // ✨ Trace context - must be after requestIdMW
 
 if (NODE_ENV !== 'production') {
     const swaggerSpec = swaggerJsdoc(swaggerOptions);
@@ -30,13 +29,22 @@ if (NODE_ENV !== 'production') {
 }
 
 (async () => {
-    await connectDB();
     await initContainer();
+
+    // ✨ Adaptive rate limiting for backpressure protection
+    const { AdaptiveLimiter } = await import('./shared/middlewares/adaptive-limiter.mw');
+    const adaptiveLimiter = new AdaptiveLimiter(container.metricsService);
+    app.use(adaptiveLimiter.middleware());
+
+    // Use metricsService from container (includes smart logging)
+    app.use(createMetricsMW(container.metricsService));
 
     // Start queue depth tracking
     const { QueueDepthService } = await import('./shared/metrics/queue-depth.service');
-    const { prisma } = await import('./shared/config/db.config');
-    const queueDepthService = new QueueDepthService(prisma);
+    const queueDepthService = new QueueDepthService(
+        container.databaseConnection.getClient(),
+        container.metricsService
+    );
     queueDepthService.startQueueDepthTracking();
 
     // use webhook here if needed

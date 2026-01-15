@@ -1,12 +1,13 @@
 import type { Redis } from 'ioredis';
 import { ICacheService } from '../interfaces';
-import { metricsService } from '../metrics/metrics.service';
+import type { MetricsService } from '../metrics/metrics.service';
 
 
 export class RedisCacheService implements ICacheService {
     constructor(
         private enabled: boolean,
         private redis: Redis,
+        private metricsService: MetricsService,
     ) { }
 
     async get<T>(key: string): Promise<T | null> {
@@ -15,10 +16,10 @@ export class RedisCacheService implements ICacheService {
         const value = await this.redis.get(key);
 
         if (value) {
-            metricsService.recordCacheHit();
+            this.metricsService.recordCacheHit();
             return JSON.parse(value) as T;
         } else {
-            metricsService.recordCacheMiss();
+            this.metricsService.recordCacheMiss();
             return null;
         }
     }

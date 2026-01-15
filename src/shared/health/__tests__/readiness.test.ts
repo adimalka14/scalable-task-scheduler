@@ -1,51 +1,47 @@
-import { ReadinessCheck } from '../readiness';
+import { HealthService } from '../health.service';
 
-// Mock config files to prevent side effects (real connections) during tests
-jest.mock('../../config/db.config', () => ({
-    prisma: {},
-}));
-
-jest.mock('../../config/cache.config', () => ({
-    default: {
-        ping: jest.fn(),
-        on: jest.fn(),
-        quit: jest.fn(),
-    },
-}));
-
-jest.mock('../../config/rabbit', () => ({
-    getChannel: jest.fn(),
-}));
-
-describe('ReadinessCheck', () => {
-    let readinessCheck: ReadinessCheck;
-    let mockPrisma: any;
-    let mockRedis: any;
-    let mockGetChannel: jest.Mock;
+describe('HealthService', () => {
+    let healthService: HealthService;
+    let mockDatabaseConnection: any;
+    let mockRedisConnection: any;
+    let mockRabbitConnection: any;
 
     beforeEach(() => {
-        mockPrisma = {
-            $queryRaw: jest.fn(),
+        // Mock DatabaseConnection
+        mockDatabaseConnection = {
+            getClient: jest.fn().mockReturnValue({
+                $queryRaw: jest.fn(),
+            }),
         };
 
-        mockRedis = {
-            ping: jest.fn(),
+        // Mock RedisConnection
+        mockRedisConnection = {
+            getClient: jest.fn().mockReturnValue({
+                ping: jest.fn(),
+            }),
         };
 
-        mockGetChannel = jest.fn();
+        // Mock RabbitMQConnection
+        mockRabbitConnection = {
+            getChannel: jest.fn(),
+        };
 
-        readinessCheck = new ReadinessCheck(mockPrisma, mockRedis, mockGetChannel);
+        healthService = new HealthService(
+            mockDatabaseConnection,
+            mockRedisConnection,
+            mockRabbitConnection
+        );
 
         jest.clearAllMocks();
     });
 
     describe('check', () => {
         it('should return success when all checks pass', async () => {
-            mockPrisma.$queryRaw.mockResolvedValue([]);
-            mockRedis.ping.mockResolvedValue('PONG');
-            mockGetChannel.mockResolvedValue({});
+            mockDatabaseConnection.getClient().$queryRaw.mockResolvedValue([]);
+            mockRedisConnection.getClient().ping.mockResolvedValue('PONG');
+            mockRabbitConnection.getChannel.mockResolvedValue({});
 
-            const result = await readinessCheck.check();
+            const result = await healthService.check();
 
             expect(result.success).toBe(true);
             expect(result.checks.database).toBe(true);
@@ -55,11 +51,11 @@ describe('ReadinessCheck', () => {
         });
 
         it('should return failure when database check fails', async () => {
-            mockPrisma.$queryRaw.mockRejectedValue(new Error('DB connection failed'));
-            mockRedis.ping.mockResolvedValue('PONG');
-            mockGetChannel.mockResolvedValue({});
+            mockDatabaseConnection.getClient().$queryRaw.mockRejectedValue(new Error('DB connection failed'));
+            mockRedisConnection.getClient().ping.mockResolvedValue('PONG');
+            mockRabbitConnection.getChannel.mockResolvedValue({});
 
-            const result = await readinessCheck.check();
+            const result = await healthService.check();
 
             expect(result.success).toBe(false);
             expect(result.checks.database).toBe(false);
@@ -68,11 +64,11 @@ describe('ReadinessCheck', () => {
         });
 
         it('should return failure when redis check fails', async () => {
-            mockPrisma.$queryRaw.mockResolvedValue([]);
-            mockRedis.ping.mockRejectedValue(new Error('Redis connection failed'));
-            mockGetChannel.mockResolvedValue({});
+            mockDatabaseConnection.getClient().$queryRaw.mockResolvedValue([]);
+            mockRedisConnection.getClient().ping.mockRejectedValue(new Error('Redis connection failed'));
+            mockRabbitConnection.getChannel.mockResolvedValue({});
 
-            const result = await readinessCheck.check();
+            const result = await healthService.check();
 
             expect(result.success).toBe(false);
             expect(result.checks.database).toBe(true);
@@ -81,11 +77,11 @@ describe('ReadinessCheck', () => {
         });
 
         it('should handle errors gracefully', async () => {
-            mockPrisma.$queryRaw.mockRejectedValue(new Error('Unexpected error'));
-            mockRedis.ping.mockRejectedValue(new Error('Unexpected error'));
-            mockGetChannel.mockRejectedValue(new Error('Unexpected error'));
+            mockDatabaseConnection.getClient().$queryRaw.mockRejectedValue(new Error('Unexpected error'));
+            mockRedisConnection.getClient().ping.mockRejectedValue(new Error('Unexpected error'));
+            mockRabbitConnection.getChannel.mockRejectedValue(new Error('Unexpected error'));
 
-            const result = await readinessCheck.check();
+            const result = await healthService.check();
 
             expect(result.success).toBe(false);
             expect(result.checks.database).toBe(false);

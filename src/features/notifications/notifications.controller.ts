@@ -7,10 +7,9 @@ import {
     NotificationType,
     UpdateNotificationDto,
 } from './notifications.types';
-import logger from '../../shared/utils/logger';
 
 export class NotificationController {
-    constructor(private notificationFacade: INotificationFacade) {}
+    constructor(private notificationFacade: INotificationFacade) { }
 
     async createNotification(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
@@ -25,12 +24,6 @@ export class NotificationController {
             };
 
             const notification = await this.notificationFacade.createNotification(dto);
-
-            logger.info('NOTIFICATION_CTRL', 'Notification created successfully', {
-                notificationId: notification.id,
-                taskId: notification.taskId,
-                reqId: req.headers['x-request-id'],
-            });
 
             res.status(StatusCodes.CREATED).json({
                 success: true,
@@ -58,11 +51,6 @@ export class NotificationController {
 
             const notification = await this.notificationFacade.updateNotification(notificationId, updateData);
 
-            logger.info('NOTIFICATION_CTRL', 'Notification updated successfully', {
-                notificationId,
-                reqId: req.headers['x-request-id'],
-            });
-
             res.status(StatusCodes.OK).json({
                 success: true,
                 data: notification,
@@ -77,11 +65,6 @@ export class NotificationController {
             const notificationId = req.params.notificationId as string;
 
             await this.notificationFacade.deleteNotification(notificationId);
-
-            logger.info('NOTIFICATION_CTRL', 'Notification deleted successfully', {
-                notificationId,
-                reqId: req.headers['x-request-id'],
-            });
 
             res.status(StatusCodes.OK).json({
                 success: true,

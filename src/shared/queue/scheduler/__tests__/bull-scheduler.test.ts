@@ -1,5 +1,4 @@
 const redisMock = {};
-jest.mock('../../../config/cache.config', () => redisMock);
 const mockLogger = {
     info: jest.fn(),
 };
@@ -22,7 +21,7 @@ describe('BullScheduler', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        scheduler = new BullScheduler();
+        scheduler = new BullScheduler(redisMock as any);
     });
 
     it('should create a queue and store it internally', async () => {

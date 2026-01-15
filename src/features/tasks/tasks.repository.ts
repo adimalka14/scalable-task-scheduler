@@ -2,11 +2,14 @@ import { Prisma, PrismaClient, Task as PrismaTask } from '@prisma/client';
 import { ITaskRepository } from './tasks.interfaces';
 import { CreateTaskDto, UpdateTaskDto, Task, TaskStatus } from './tasks.types';
 import { NotFoundError } from '../../shared/config/errors';
-import { metricsService } from '../../shared/metrics/metrics.service';
+import type { MetricsService } from '../../shared/metrics/metrics.service';
 
 
 export class TaskRepository implements ITaskRepository {
-    constructor(private prisma: PrismaClient) { }
+    constructor(
+        private prisma: PrismaClient,
+        private metricsService?: MetricsService
+    ) { }
 
     async create(dto: CreateTaskDto): Promise<Task> {
         const result = (await this.prisma.task.create({
@@ -114,17 +117,17 @@ export class TaskRepository implements ITaskRepository {
         })) as PrismaTask;
 
         // Record metrics
-        if (result.scheduledAt && result.executingAt) {
+        if (result.scheduledAt && result.executingAt && this.metricsService) {
             const waitTime = (result.executingAt.getTime() - result.scheduledAt.getTime()) / 1000;
             if (waitTime > 0) {
-                metricsService.taskQueueWaitTime.observe(waitTime);
+                this.metricsService.taskQueueWaitTime.observe(waitTime);
             }
         }
 
-        if (result.executingAt && result.executedAt) {
+        if (result.executingAt && result.executedAt && this.metricsService) {
             const duration = (result.executedAt.getTime() - result.executingAt.getTime()) / 1000;
             if (duration > 0) {
-                metricsService.taskExecutionDuration.observe(duration);
+                this.metricsService.taskExecutionDuration.observe(duration);
             }
         }
 

@@ -1,17 +1,15 @@
 import { Request, Response } from 'express';
-import { metricsMW } from '../metrics.mw';
-import { metricsService } from '../../metrics/metrics.service';
+import { createMetricsMW } from '../metrics.mw';
 
-jest.mock('../../metrics/metrics.service', () => ({
-    metricsService: {
-        recordHttpRequest: jest.fn(),
-    },
-}));
+const mockMetricsService = {
+    recordHttpRequest: jest.fn(),
+};
 
 describe('Metrics Middleware', () => {
     let req: Partial<Request>;
     let res: Partial<Response>;
     let next: jest.Mock;
+    let middleware: ReturnType<typeof createMetricsMW>;
 
     beforeEach(() => {
         req = {
@@ -24,11 +22,12 @@ describe('Metrics Middleware', () => {
             on: jest.fn(),
         } as any;
         next = jest.fn();
+        middleware = createMetricsMW(mockMetricsService as any);
         jest.clearAllMocks();
     });
 
     it('should measure duration and record metrics on finish', () => {
-        metricsMW(req as Request, res as Response, next);
+        middleware(req as Request, res as Response, next);
 
         expect(next).toHaveBeenCalled();
         expect(res.on).toHaveBeenCalledWith('finish', expect.any(Function));
@@ -37,7 +36,7 @@ describe('Metrics Middleware', () => {
         const finishCallback = (res.on as jest.Mock).mock.calls[0][1];
         finishCallback();
 
-        expect(metricsService.recordHttpRequest).toHaveBeenCalledWith(
+        expect(mockMetricsService.recordHttpRequest).toHaveBeenCalledWith(
             'GET',
             '/test',
             200,
@@ -47,12 +46,12 @@ describe('Metrics Middleware', () => {
 
     it('should fallback to req.path if req.route is undefined', () => {
         req.route = undefined;
-        metricsMW(req as Request, res as Response, next);
+        middleware(req as Request, res as Response, next);
 
         const finishCallback = (res.on as jest.Mock).mock.calls[0][1];
         finishCallback();
 
-        expect(metricsService.recordHttpRequest).toHaveBeenCalledWith(
+        expect(mockMetricsService.recordHttpRequest).toHaveBeenCalledWith(
             'GET',
             '/test',
             200,

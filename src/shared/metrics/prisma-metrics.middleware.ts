@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
-import { metricsService } from './metrics.service';
+import type { MetricsService } from './metrics.service';
 
-export function prismaMetricsMiddleware(): Prisma.Middleware {
+export function prismaMetricsMiddleware(metricsService: MetricsService): Prisma.Middleware {
     return async (params, next) => {
         const start = process.hrtime();
         const result = await next(params);

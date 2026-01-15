@@ -6,8 +6,6 @@ jest.mock('bullmq', () => ({
     })),
 }));
 
-jest.mock('../../../config/cache.config', () => ({}));
-
 jest.mock('../../../utils/logger', () => ({
     info: jest.fn(),
     warn: jest.fn(),
@@ -18,6 +16,8 @@ import { Worker } from 'bullmq';
 import { QueueWorker } from '../worker-scheduler';
 import logger from '../../../utils/logger';
 
+const redisMock = {};
+
 describe('Bull Worker Scheduler', () => {
     it('should create one Worker per queue', () => {
         const jobs = [
@@ -25,7 +25,7 @@ describe('Bull Worker Scheduler', () => {
             { queue: 'notifications', jobName: 'sendPush', handler: jest.fn(), concurrency: 1 },
         ];
 
-        const queueWorker = new QueueWorker(jobs);
+        const queueWorker = new QueueWorker(jobs, redisMock as any);
         queueWorker.run();
 
         expect(Worker).toHaveBeenCalledTimes(2);
@@ -36,7 +36,7 @@ describe('Bull Worker Scheduler', () => {
 
         const jobs = [{ queue: 'email', jobName: 'sendEmail', handler, concurrency: 1 }];
 
-        const queueWorker = new QueueWorker(jobs);
+        const queueWorker = new QueueWorker(jobs, redisMock as any);
 
         queueWorker.run();
 
@@ -52,7 +52,7 @@ describe('Bull Worker Scheduler', () => {
 
         const warnSpy = jest.spyOn(logger, 'warn');
 
-        const queueWorker = new QueueWorker(jobs);
+        const queueWorker = new QueueWorker(jobs, redisMock as any);
         queueWorker.run();
 
         const fn = (Worker as unknown as jest.Mock).mock.calls[0][1];
@@ -67,7 +67,7 @@ describe('Bull Worker Scheduler', () => {
 
         const errorSpy = jest.spyOn(logger, 'error');
 
-        const queueWorker = new QueueWorker(jobs);
+        const queueWorker = new QueueWorker(jobs, redisMock as any);
         queueWorker.run();
 
         const fn = (Worker as unknown as jest.Mock).mock.calls[0][1];
@@ -82,7 +82,7 @@ describe('Bull Worker Scheduler', () => {
             { queue: 'same', jobName: 'job2', handler: jest.fn(), concurrency: 5 },
         ];
 
-        const queueWorker = new QueueWorker(jobs);
+        const queueWorker = new QueueWorker(jobs, redisMock as any);
         queueWorker.run();
 
         expect(Worker).toHaveBeenCalledWith('same', expect.any(Function), expect.objectContaining({ concurrency: 5 }));
