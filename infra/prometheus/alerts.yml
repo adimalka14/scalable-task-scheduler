@@ -1,0 +1,174 @@
+# Prometheus Alert Rules
+# SLO-based alerts for monitoring system health
+
+groups:
+  - name: slo_alerts
+    interval: 30s
+    rules:
+      # ========================================
+      # API Latency Alerts
+      # ========================================
+      
+      - alert: HighP95Latency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+          ) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "High P95 latency detected"
+          description: "P95 latency is {{ $value | humanizeDuration }} (threshold: 500ms)"
+          runbook_url: "https://github.com/your-org/runbooks/api-latency"
+      
+      - alert: CriticalP99Latency
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+          ) > 1.0
+        for: 5m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "Critical P99 latency detected"
+          description: "P99 latency is {{ $value | humanizeDuration }} (threshold: 1s)"
+      
+      # ========================================
+      # Error Rate Alerts
+      # ========================================
+      
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(http_request_errors_total[5m]))
+            /
+            sum(rate(http_request_duration_seconds_count[5m]))
+          ) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "Error rate above 1%"
+          description: "Current error rate: {{ $value | humanizePercentage }}"
+          runbook_url: "https://github.com/your-org/runbooks/error-rate"
+      
+      - alert: ElevatedErrorRate
+        expr: |
+          (
+            sum(rate(http_request_errors_total[5m]))
+            /
+            sum(rate(http_request_duration_seconds_count[5m]))
+          ) > 0.005
+        for: 10m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "Error rate above 0.5%"
+          description: "Current error rate: {{ $value | humanizePercentage }}"
+      
+      # ========================================
+      # Queue / Saturation Alerts
+      # ========================================
+      
+      - alert: QueueBacklog
+        expr: task_queue_depth{status="PENDING"} > 1000
+        for: 10m
+        labels:
+          severity: warning
+          component: queue
+        annotations:
+          summary: "Task queue backing up"
+          description: "{{ $value }} pending tasks in queue (threshold: 1000)"
+          runbook_url: "https://github.com/your-org/runbooks/queue-backlog"
+      
+      - alert: CriticalQueueBacklog
+        expr: task_queue_depth{status="PENDING"} > 5000
+        for: 5m
+        labels:
+          severity: critical
+          component: queue
+        annotations:
+          summary: "Critical task queue backlog"
+          description: "{{ $value }} pending tasks - system may be overloaded"
+      
+      - alert: HighTaskWaitTime
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(task_queue_wait_time_seconds_bucket[5m])) by (le)
+          ) > 300
+        for: 10m
+        labels:
+          severity: warning
+          component: queue
+        annotations:
+          summary: "Tasks waiting too long in queue"
+          description: "P95 wait time is {{ $value | humanizeDuration }} (threshold: 5m)"
+      
+      # ========================================
+      # Database Alerts
+      # ========================================
+      
+      - alert: HighDBLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(db_query_duration_seconds_bucket[5m])) by (le)
+          ) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Database queries are slow"
+          description: "P95 DB query latency is {{ $value | humanizeDuration }} (threshold: 100ms)"
+          runbook_url: "https://github.com/your-org/runbooks/db-latency"
+      
+      - alert: CriticalDBLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(db_query_duration_seconds_bucket[5m])) by (le)
+          ) > 0.5
+        for: 3m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "Critical database performance degradation"
+          description: "P95 DB query latency is {{ $value | humanizeDuration }}"
+      
+      # ========================================
+      # Cache Alerts
+      # ========================================
+      
+      - alert: LowCacheHitRate
+        expr: |
+          (
+            sum(rate(cache_operations_total{operation="hit"}[5m]))
+            /
+            sum(rate(cache_operations_total[5m]))
+          ) < 0.5
+        for: 10m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "Cache hit rate is low"
+          description: "Cache hit rate is {{ $value | humanizePercentage }} (threshold: 50%)"
+      
+      # ========================================
+      # System Health Alerts
+      # ========================================
+      
+      - alert: NoMetrics
+        expr: up{job="scalable-task-scheduler"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: system
+        annotations:
+          summary: "Application metrics endpoint is down"
+          description: "Cannot scrape metrics from application"

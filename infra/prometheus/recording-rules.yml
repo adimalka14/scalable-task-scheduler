@@ -1,0 +1,92 @@
+# Prometheus Recording Rules
+# Pre-calculate expensive queries for faster dashboard loading
+
+groups:
+  # HTTP/API Metrics
+  - name: http_metrics
+    interval: 30s
+    rules:
+      # Pre-calculate P50 latency
+      - record: http:request_duration:p50
+        expr: |
+          histogram_quantile(0.50,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+          )
+
+      # Pre-calculate P95 latency
+      - record: http:request_duration:p95
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+          )
+
+      # Pre-calculate P99 latency
+      - record: http:request_duration:p99
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+          )
+
+      # Pre-calculate error rate ratio
+      - record: http:error_rate:ratio
+        expr: |
+          sum(rate(http_request_errors_total[5m]))
+          /
+          sum(rate(http_request_duration_seconds_count[5m]))
+
+      # Pre-calculate request rate (RPS)
+      - record: http:request_rate:rps
+        expr: |
+          sum(rate(http_request_duration_seconds_count[1m]))
+
+  # Queue Metrics
+  - name: queue_metrics
+    interval: 30s
+    rules:
+      # Pre-calculate queue wait time P95
+      - record: queue:wait_time:p95
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(task_queue_wait_time_seconds_bucket[5m])) by (le)
+          )
+
+      # Pre-calculate task execution P95
+      - record: queue:execution_duration:p95
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(task_execution_duration_seconds_bucket[5m])) by (le)
+          )
+
+  # Database Metrics
+  - name: db_metrics
+    interval: 30s
+    rules:
+      # Pre-calculate DB query P95
+      - record: db:query_duration:p95
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(db_query_duration_seconds_bucket[5m])) by (le)
+          )
+
+      # Pre-calculate DB query P99
+      - record: db:query_duration:p99
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(db_query_duration_seconds_bucket[5m])) by (le)
+          )
+
+      # Pre-calculate DB query rate
+      - record: db:query_rate:qps
+        expr: |
+          sum(rate(db_query_duration_seconds_count[1m]))
+
+  # Cache Metrics
+  - name: cache_metrics
+    interval: 30s
+    rules:
+      # Pre-calculate cache hit rate
+      - record: cache:hit_rate:ratio
+        expr: |
+          sum(rate(cache_operations_total{operation="hit"}[5m]))
+          /
+          sum(rate(cache_operations_total[5m]))
