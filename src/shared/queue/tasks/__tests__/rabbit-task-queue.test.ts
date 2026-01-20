@@ -1,10 +1,5 @@
 import { RabbitTaskQueue } from '../rabbitTaskQueue';
-import { getChannel } from '../../../config/rabbit';
 import { Channel } from 'amqplib';
-
-jest.mock('../../../config/rabbit', () => ({
-    getChannel: jest.fn(),
-}));
 
 const mockSendToQueue = jest.fn();
 const mockAssertQueue = jest.fn();
@@ -13,21 +8,23 @@ const mockAck = jest.fn();
 const mockNack = jest.fn();
 const mockPrefetch = jest.fn();
 
-(getChannel as jest.Mock).mockResolvedValue({
-    sendToQueue: mockSendToQueue,
-    assertQueue: mockAssertQueue,
-    consume: mockConsume,
-    ack: mockAck,
-    nack: mockNack,
-    prefetch: mockPrefetch,
-} as unknown as Channel);
+const mockRabbitConnection = {
+    getChannel: jest.fn().mockResolvedValue({
+        sendToQueue: mockSendToQueue,
+        assertQueue: mockAssertQueue,
+        consume: mockConsume,
+        ack: mockAck,
+        nack: mockNack,
+        prefetch: mockPrefetch,
+    } as unknown as Channel),
+};
 
 describe('RabbitTaskQueue', () => {
     let taskQueue: RabbitTaskQueue;
 
     beforeEach(() => {
         jest.clearAllMocks();
-        taskQueue = new RabbitTaskQueue('test-channel');
+        taskQueue = new RabbitTaskQueue('test-channel', mockRabbitConnection as any);
     });
 
     describe('enqueue', () => {

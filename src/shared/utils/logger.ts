@@ -2,6 +2,7 @@ import winston from 'winston';
 import winstonDailyRotateFile from 'winston-daily-rotate-file';
 
 import { LOGGING_MODE, LOGGING_LINE_TRACE, LOG_DIR_PATH } from '../config/env.config';
+import { getTraceContext } from '../middlewares/trace-context.mw';
 
 const appName = 'scalable-task-scheduler';
 
@@ -43,7 +44,7 @@ class Logger {
             maxFiles: '14d',
             level: LOGGING_MODE,
         });
-        transportDailyRotateFile.on('rotate', function (_oldFileName: string, _newFileName: string) {});
+        transportDailyRotateFile.on('rotate', function (_oldFileName: string, _newFileName: string) { });
         this.logger = winston.createLogger({
             transports: [transportDailyRotateFile, new winston.transports.Console({ level: LOGGING_MODE })],
             format: winston.format.combine(
@@ -96,6 +97,13 @@ class Logger {
         if (Object.prototype.hasOwnProperty.call(options, 'message')) {
             options.$message = options.message;
             delete options.message;
+        }
+
+        // ✨ Automatically inject trace context from AsyncLocalStorage
+        const traceCtx = getTraceContext();
+        if (traceCtx) {
+            options.trace_id = traceCtx.traceId;
+            options.span_id = traceCtx.spanId;
         }
 
         let lineTrace;

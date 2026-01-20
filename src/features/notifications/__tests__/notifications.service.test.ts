@@ -1,6 +1,6 @@
 import { NotificationService } from '../notifications.service';
 import { NotificationRepository } from '../notifications.repository';
-import { CreateNotificationDto, UpdateNotificationDto, Notification, NotificationStatus } from '../notifications.types';
+import { CreateNotificationDto, UpdateNotificationDto, Notification, NotificationStatus, NotificationType } from '../notifications.types';
 
 describe('NotificationService', () => {
     let service: NotificationService;
@@ -23,8 +23,8 @@ describe('NotificationService', () => {
         it('should create notification successfully', async () => {
             const dto: CreateNotificationDto = {
                 taskId: 'task-123',
-                type: 'REMINDER',
-                status: 'PENDING',
+                type: NotificationType.TASK_REMINDER,
+                status: NotificationStatus.PENDING,
                 message: 'Task due soon',
                 sentAt: new Date('2024-01-01T10:00:00Z'),
             };
@@ -32,8 +32,8 @@ describe('NotificationService', () => {
             const expectedNotification: Notification = {
                 id: 'notification-123',
                 taskId: 'task-123',
-                type: 'REMINDER',
-                status: 'PENDING',
+                type: NotificationType.TASK_REMINDER,
+                status: NotificationStatus.PENDING,
                 message: 'Task due soon',
                 sentAt: new Date('2024-01-01T10:00:00Z'),
                 createdAt: new Date(),
@@ -50,8 +50,8 @@ describe('NotificationService', () => {
         it('should throw error when repository fails', async () => {
             const dto: CreateNotificationDto = {
                 taskId: 'task-123',
-                type: 'REMINDER',
-                status: 'PENDING',
+                type: NotificationType.TASK_REMINDER,
+                status: NotificationStatus.PENDING,
                 message: 'Task due soon',
                 sentAt: new Date('2024-01-01T10:00:00Z'),
             };
@@ -67,13 +67,13 @@ describe('NotificationService', () => {
     describe('updateNotification', () => {
         it('should update notification successfully', async () => {
             const notificationId = 'notification-123';
-            const dto: UpdateNotificationDto = { status: 'SENT' };
+            const dto: UpdateNotificationDto = { status: NotificationStatus.SENT };
 
             const expectedNotification: Notification = {
                 id: notificationId,
                 taskId: 'task-123',
-                type: 'REMINDER',
-                status: 'SENT',
+                type: NotificationType.TASK_REMINDER,
+                status: NotificationStatus.SENT,
                 message: 'Task due soon',
                 sentAt: new Date('2024-01-01T10:00:00Z'),
                 createdAt: new Date(),
@@ -107,8 +107,8 @@ describe('NotificationService', () => {
             const expectedNotification: Notification = {
                 id: notificationId,
                 taskId: 'task-123',
-                type: 'REMINDER',
-                status: 'PENDING',
+                type: NotificationType.TASK_REMINDER,
+                status: NotificationStatus.PENDING,
                 message: 'Task due soon',
                 sentAt: new Date('2024-01-01T10:00:00Z'),
                 createdAt: new Date(),
@@ -131,8 +131,8 @@ describe('NotificationService', () => {
                 {
                     id: 'notification-1',
                     taskId,
-                type: 'REMINDER',
-                status: 'PENDING',
+                type: NotificationType.TASK_REMINDER,
+                status: NotificationStatus.PENDING,
                     message: 'Task due soon',
                     sentAt: new Date('2024-01-01T10:00:00Z'),
                     createdAt: new Date(),
@@ -140,8 +140,8 @@ describe('NotificationService', () => {
                 {
                     id: 'notification-2',
                     taskId,
-                    type: 'REMINDER',
-                    status: 'SENT',
+                    type: NotificationType.TASK_REMINDER,
+                    status: NotificationStatus.SENT,
                     message: 'Task overdue',
                     sentAt: new Date('2024-01-02T10:00:00Z'),
                     createdAt: new Date(),
@@ -159,14 +159,14 @@ describe('NotificationService', () => {
 
     describe('getNotificationsByStatus', () => {
         it('should get notifications by status successfully', async () => {
-            const status: NotificationStatus = 'PENDING';
+            const status: NotificationStatus = NotificationStatus.PENDING;
 
             const expectedNotifications: Notification[] = [
                 {
                     id: 'notification-1',
                     taskId: 'task-123',
-                    type: 'REMINDER',
-                    status: status as NotificationStatus,
+                    type: NotificationType.TASK_REMINDER,
+                    status: status,
                     message: 'Task due soon',
                     sentAt: new Date('2024-01-01T10:00:00Z'),
                     createdAt: new Date(),

@@ -1,4 +1,5 @@
-
+# Production environment - extends base services and adds app container
+# Monitoring should be handled by cloud provider (Prometheus/Grafana in k8s)
 version: '3.8'
 
 services:
@@ -7,37 +8,10 @@ services:
     container_name: task_app
     restart: unless-stopped
     env_file:
-      - .env
+      - ../.env
     depends_on:
       - postgres
       - redis
       - rabbitmq
     ports:
       - "8080:8080"
-
-  postgres:
-    image: postgres:17
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: taskdb
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-
-  redis:
-    image: redis:7
-    restart: unless-stopped
-
-  rabbitmq:
-    image: rabbitmq:3-management
-    restart: unless-stopped
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-
-volumes:
-  pgdata:

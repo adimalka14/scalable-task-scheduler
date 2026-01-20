@@ -13,6 +13,7 @@ export const PORT = +(process.env.PORT ?? 3000);
 export const DATABASE_URL = process.env.DATABASE_URL;
 
 export const RABBITMQ_URL = process.env.RABBITMQ_URL ?? 'amqp://guest:guest@127.0.0.1:5672';
+export const RABBITMQ_PREFETCH_COUNT = +(process.env.RABBITMQ_PREFETCH_COUNT ?? 5);
 
 export const REDIS_HOST = process.env.REDIS_HOST ?? '127.0.0.1';
 export const REDIS_PORT = +(process.env.REDIS_PORT ?? 6379);

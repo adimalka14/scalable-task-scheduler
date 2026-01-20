@@ -1,7 +1,7 @@
 import { NotificationFacade } from '../notifications.facade';
 import { NotificationService } from '../notifications.service';
 import { IEventBus } from '../../../shared/interfaces';
-import { CreateNotificationDto, UpdateNotificationDto, Notification, NotificationStatus } from '../notifications.types';
+import { CreateNotificationDto, UpdateNotificationDto, Notification, NotificationStatus, NotificationType } from '../notifications.types';
 import { EVENTS } from '../../../shared/queue/queue.constants';
 
 describe('NotificationFacade', () => {
@@ -21,17 +21,65 @@ describe('NotificationFacade', () => {
 
         mockEventBus = {
             publish: jest.fn(),
+            subscribe: jest.fn(),
         } as any;
 
         facade = new NotificationFacade(mockService, mockEventBus);
+    });
+
+    describe('init', () => {
+        it('should subscribe to TASK_TIMED_ARRIVAL event', async () => {
+            mockEventBus.subscribe.mockResolvedValue();
+
+            await facade.init();
+
+            expect(mockEventBus.subscribe).toHaveBeenCalledWith(
+                EVENTS.EVENT_BUS_QUEUE.TASK_TIMED_ARRIVAL,
+                expect.any(Function)
+            );
+        });
+
+        it('should create notification when TASK_TIMED_ARRIVAL event is received', async () => {
+            let eventHandler: any;
+            mockEventBus.subscribe.mockImplementation(async (event, handler) => {
+                eventHandler = handler;
+            });
+
+            const mockNotification: Notification = {
+                id: 'notif-123',
+                taskId: 'task-123',
+                type: NotificationType.TASK_REMINDER,
+                status: NotificationStatus.PENDING,
+                message: 'Reminder for task task-123',
+                sentAt: null,
+                createdAt: new Date(),
+            };
+
+            mockService.createNotification.mockResolvedValue(mockNotification);
+            mockService.getTaskNotifications.mockResolvedValue([]);
+            mockEventBus.publish.mockResolvedValue();
+
+            await facade.init();
+
+            // Simulate the event being triggered
+            await eventHandler({ taskId: 'task-123' });
+
+            expect(mockService.createNotification).toHaveBeenCalledWith({
+                taskId: 'task-123',
+                type: NotificationType.TASK_REMINDER,
+                status: NotificationStatus.PENDING,
+                message: 'Reminder for task task-123',
+                sentAt: null,
+            });
+        });
     });
 
     describe('createNotification', () => {
         it('should create notification and publish event successfully', async () => {
             const dto: CreateNotificationDto = {
                 taskId: 'task-123',
-                type: 'REMINDER',
-                status: 'PENDING',
+                type: NotificationType.TASK_REMINDER,
+                status: NotificationStatus.PENDING,
                 message: 'Task due soon',
                 sentAt: new Date('2024-01-01T10:00:00Z'),
             };
@@ -39,8 +87,8 @@ describe('NotificationFacade', () => {
             const expectedNotification: Notification = {
                 id: 'notification-123',
                 taskId: 'task-123',
-                type: 'REMINDER',
-                status: 'PENDING',
+                type: NotificationType.TASK_REMINDER,
+                status: NotificationStatus.PENDING,
                 message: 'Task due soon',
                 sentAt: new Date('2024-01-01T10:00:00Z'),
                 createdAt: new Date(),
@@ -58,8 +106,8 @@ describe('NotificationFacade', () => {
                 {
                     notificationId: 'notification-123',
                     taskId: 'task-123',
-                    type: 'REMINDER',
-                    status: 'PENDING',
+                    type: NotificationType.TASK_REMINDER,
+                    status: NotificationStatus.PENDING,
                     message: 'Task due soon',
                 }
             );
@@ -68,8 +116,8 @@ describe('NotificationFacade', () => {
         it('should throw error when service fails', async () => {
             const dto: CreateNotificationDto = {
                 taskId: 'task-123',
-                type: 'REMINDER',
-                status: 'PENDING',
+                type: NotificationType.TASK_REMINDER,
+                status: NotificationStatus.PENDING,
                 message: 'Task due soon',
                 sentAt: new Date('2024-01-01T10:00:00Z'),
             };
@@ -85,13 +133,13 @@ describe('NotificationFacade', () => {
     describe('updateNotification', () => {
         it('should update notification and publish event successfully', async () => {
             const notificationId = 'notification-123';
-            const dto: UpdateNotificationDto = { status: 'SENT' };
+            const dto: UpdateNotificationDto = { status: NotificationStatus.SENT };
 
             const expectedNotification: Notification = {
                 id: notificationId,
                 taskId: 'task-123',
-                type: 'REMINDER',
-                status: 'SENT',
+                type: NotificationType.TASK_REMINDER,
+                status: NotificationStatus.SENT,
                 message: 'Task due soon',
                 sentAt: new Date('2024-01-01T10:00:00Z'),
                 createdAt: new Date(),
@@ -109,7 +157,7 @@ describe('NotificationFacade', () => {
                 {
                     notificationId: 'notification-123',
                     taskId: 'task-123',
-                    type: 'REMINDER',
+                    type: NotificationType.TASK_REMINDER,
                     status: 'SENT',
                     message: 'Task due soon',
                 }
@@ -141,8 +189,8 @@ describe('NotificationFacade', () => {
             const expectedNotification: Notification = {
                 id: notificationId,
                 taskId: 'task-123',
-                type: 'REMINDER',
-                status: 'PENDING',
+                type: NotificationType.TASK_REMINDER,
+                status: NotificationStatus.PENDING,
                 message: 'Task due soon',
                 sentAt: new Date('2024-01-01T10:00:00Z'),
                 createdAt: new Date(),
@@ -165,8 +213,8 @@ describe('NotificationFacade', () => {
                 {
                     id: 'notification-1',
                     taskId,
-                    type: 'REMINDER',
-                    status: 'PENDING',
+                    type: NotificationType.TASK_REMINDER,
+                    status: NotificationStatus.PENDING,
                     message: 'Task due soon',
                     sentAt: new Date('2024-01-01T10:00:00Z'),
                     createdAt: new Date(),
@@ -184,13 +232,13 @@ describe('NotificationFacade', () => {
 
     describe('getNotificationsByStatus', () => {
         it('should get notifications by status successfully', async () => {
-            const status: NotificationStatus = 'PENDING';
+            const status: NotificationStatus = NotificationStatus.PENDING;
 
             const expectedNotifications: Notification[] = [
                 {
                     id: 'notification-1',
                     taskId: 'task-123',
-                    type: 'REMINDER',
+                    type: NotificationType.TASK_REMINDER,
                     status: status as NotificationStatus,
                     message: 'Task due soon',
                     sentAt: new Date('2024-01-01T10:00:00Z'),

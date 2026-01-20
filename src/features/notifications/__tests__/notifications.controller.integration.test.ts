@@ -1,6 +1,6 @@
 import { NotificationController } from '../notifications.controller';
 import { NotificationFacade } from '../notifications.facade';
-import { CreateNotificationDto, UpdateNotificationDto, Notification, NotificationStatus } from '../notifications.types';
+import { Notification, NotificationStatus, NotificationType } from '../notifications.types';
 import { Request, Response } from 'express';
 
 describe('NotificationController Integration', () => {
@@ -36,16 +36,16 @@ describe('NotificationController Integration', () => {
         it('should create notification successfully', async () => {
             const notificationData = {
                 taskId: 'task-123',
-                type: 'REMINDER',
-                status: 'PENDING',
+                type: NotificationType.TASK_REMINDER,
+                status: NotificationStatus.PENDING,
                 message: 'Task due soon',
             };
 
             const expectedNotification: Notification = {
                 id: 'notification-123',
                 taskId: 'task-123',
-                type: 'REMINDER',
-                status: 'PENDING',
+                type: NotificationType.TASK_REMINDER,
+                status: NotificationStatus.PENDING,
                 message: 'Task due soon',
                 sentAt: new Date(),
                 createdAt: new Date(),
@@ -62,8 +62,8 @@ describe('NotificationController Integration', () => {
 
             expect(mockFacade.createNotification).toHaveBeenCalledWith({
                 taskId: 'task-123',
-                type: 'REMINDER',
-                status: 'PENDING',
+                type: NotificationType.TASK_REMINDER,
+                status: NotificationStatus.PENDING,
                 message: 'Task due soon',
                 sentAt: expect.any(Date),
             });
@@ -77,8 +77,8 @@ describe('NotificationController Integration', () => {
         it('should handle facade error', async () => {
             const notificationData = {
                 taskId: 'task-123',
-                type: 'REMINDER',
-                status: 'PENDING',
+                type: NotificationType.TASK_REMINDER,
+                status: NotificationStatus.PENDING,
                 message: 'Task due soon',
                 sentAt: '2024-01-01T10:00:00Z',
             };
@@ -98,20 +98,38 @@ describe('NotificationController Integration', () => {
             expect(responseStatus).not.toHaveBeenCalled();
             expect(responseJson).not.toHaveBeenCalled();
         });
+
+        it('should handle error when deleting notification', async () => {
+            const notificationId = 'notification-123';
+
+            mockRequest = {
+                params: { notificationId },
+                headers: { 'x-request-id': 'req-123' },
+            };
+
+            const error = new Error('Delete error');
+            mockFacade.deleteNotification.mockRejectedValue(error);
+
+            const mockNext = jest.fn();
+            await controller.deleteNotification(mockRequest as Request, mockResponse as Response, mockNext);
+
+            expect(mockNext).toHaveBeenCalledWith(error);
+            expect(responseStatus).not.toHaveBeenCalled();
+        });
     });
 
     describe('updateNotification', () => {
         it('should update notification successfully', async () => {
             const notificationId = 'notification-123';
             const updateData = {
-                status: 'SENT',
+                status: NotificationStatus.SENT,
             };
 
             const expectedNotification: Notification = {
                 id: notificationId,
                 taskId: 'task-123',
-                type: 'REMINDER',
-                status: 'SENT',
+                type: NotificationType.TASK_REMINDER,
+                status: NotificationStatus.SENT,
                 message: 'Task due soon',
                 sentAt: new Date('2024-01-01T10:00:00Z'),
                 createdAt: new Date(),
@@ -128,7 +146,7 @@ describe('NotificationController Integration', () => {
             await controller.updateNotification(mockRequest as Request, mockResponse as Response, jest.fn());
 
             expect(mockFacade.updateNotification).toHaveBeenCalledWith(notificationId, {
-                status: 'SENT',
+                status: NotificationStatus.SENT,
                 sentAt: expect.any(Date),
             });
             expect(responseStatus).toHaveBeenCalledWith(200);
@@ -141,7 +159,7 @@ describe('NotificationController Integration', () => {
         it('should handle notification not found error', async () => {
             const notificationId = 'notification-123';
             const updateData = {
-                status: 'SENT',
+                status: NotificationStatus.SENT,
             };
 
             mockRequest = {
@@ -191,8 +209,8 @@ describe('NotificationController Integration', () => {
             const expectedNotification: Notification = {
                 id: notificationId,
                 taskId: 'task-123',
-                type: 'REMINDER',
-                status: 'PENDING',
+                type: NotificationType.TASK_REMINDER,
+                status: NotificationStatus.PENDING,
                 message: 'Task due soon',
                 sentAt: new Date('2024-01-01T10:00:00Z'),
                 createdAt: new Date(),
@@ -214,6 +232,24 @@ describe('NotificationController Integration', () => {
                 data: expectedNotification,
             });
         });
+
+        it('should handle error when getting notification', async () => {
+            const notificationId = 'notification-123';
+
+            mockRequest = {
+                params: { notificationId },
+                headers: { 'x-request-id': 'req-123' },
+            };
+
+            const error = new Error('Get error');
+            mockFacade.getNotification.mockRejectedValue(error);
+
+            const mockNext = jest.fn();
+            await controller.getNotification(mockRequest as Request, mockResponse as Response, mockNext);
+
+            expect(mockNext).toHaveBeenCalledWith(error);
+            expect(responseStatus).not.toHaveBeenCalled();
+        });
     });
 
     describe('getTaskNotifications', () => {
@@ -223,8 +259,8 @@ describe('NotificationController Integration', () => {
                 {
                     id: 'notification-1',
                     taskId,
-                    type: 'REMINDER',
-                    status: 'PENDING',
+                    type: NotificationType.TASK_REMINDER,
+                    status: NotificationStatus.PENDING,
                     message: 'Task due soon',
                     sentAt: new Date('2024-01-01T10:00:00Z'),
                     createdAt: new Date(),
@@ -232,8 +268,8 @@ describe('NotificationController Integration', () => {
                 {
                     id: 'notification-2',
                     taskId,
-                    type: 'REMINDER',
-                    status: 'SENT',
+                    type: NotificationType.TASK_REMINDER,
+                    status: NotificationStatus.SENT,
                     message: 'Task overdue',
                     sentAt: new Date('2024-01-02T10:00:00Z'),
                     createdAt: new Date(),
@@ -260,12 +296,12 @@ describe('NotificationController Integration', () => {
 
     describe('getNotificationsByStatus', () => {
         it('should get notifications by status successfully', async () => {
-            const status: NotificationStatus = 'PENDING';
+            const status: NotificationStatus = NotificationStatus.PENDING;
             const expectedNotifications: Notification[] = [
                 {
                     id: 'notification-1',
                     taskId: 'task-123',
-                    type: 'REMINDER',
+                    type: NotificationType.TASK_REMINDER,
                     status,
                     message: 'Task due soon',
                     sentAt: new Date('2024-01-01T10:00:00Z'),
@@ -288,6 +324,24 @@ describe('NotificationController Integration', () => {
                 success: true,
                 data: expectedNotifications,
             });
+        });
+
+        it('should handle error when getting notifications by status', async () => {
+            const status: NotificationStatus = NotificationStatus.PENDING;
+
+            mockRequest = {
+                params: { status },
+                headers: { 'x-request-id': 'req-123' },
+            };
+
+            const error = new Error('Get by status error');
+            mockFacade.getNotificationsByStatus.mockRejectedValue(error);
+
+            const mockNext = jest.fn();
+            await controller.getNotificationsByStatus(mockRequest as Request, mockResponse as Response, mockNext);
+
+            expect(mockNext).toHaveBeenCalledWith(error);
+            expect(responseStatus).not.toHaveBeenCalled();
         });
     });
 });

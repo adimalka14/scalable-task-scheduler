@@ -1,37 +1,69 @@
-
+# Development environment - extends base services and adds monitoring
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:14
-    container_name: task_pg
+  # Monitoring services (dev only)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: task_prometheus
     restart: unless-stopped
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: taskdb
     ports:
-      - "5432:5432"
+      - "9090:9090"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml
+      - ./prometheus/recording-rules.yml:/etc/prometheus/recording-rules.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
-  redis:
-    image: redis:7
-    container_name: task_redis
+  grafana:
+    image: grafana/grafana:latest
+    container_name: task_grafana
     restart: unless-stopped
     ports:
-      - "6379:6379"
-
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: task_rabbit
-    restart: unless-stopped
-    ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "3030:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    depends_on:
+      - prometheus
 
-volumes:
-  pgdata:
+  # Infrastructure Exporters (dev only)
+  redis_exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: task_redis_exporter
+    restart: unless-stopped
+    ports:
+      - "9121:9121"
+    environment:
+      REDIS_ADDR: "redis:6379"
+    depends_on:
+      - redis
+
+  postgres_exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: task_postgres_exporter
+    restart: unless-stopped
+    ports:
+      - "9187:9187"
+    environment:
+      DATA_SOURCE_NAME: "postgresql://postgres:postgres@postgres:5432/taskdb?sslmode=disable"
+    depends_on:
+      - postgres
+
+  node_exporter:
+    image: prom/node-exporter:latest
+    container_name: task_node_exporter
+    restart: unless-stopped
+    ports:
+      - "9100:9100"
+    # command:
+    #   - '--path.rootfs=/host'
+    # volumes:
+    #   - '/:/host:ro,rslave'

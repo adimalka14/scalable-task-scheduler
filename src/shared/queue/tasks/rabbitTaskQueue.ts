@@ -1,15 +1,17 @@
 import { ITaskQueue } from '../../interfaces';
-import { getChannel, RABBIT_PREFETCH_COUNT } from '../../config/rabbit';
+import type { RabbitMQConnection } from '../../infrastructure';
+import { RABBITMQ_PREFETCH_COUNT } from '../../config/env.config';
 import logger from '../../utils/logger';
 
 export class RabbitTaskQueue implements ITaskQueue {
     constructor(
         private readonly channelName = 'default',
-        private readonly prefetchCount = RABBIT_PREFETCH_COUNT,
+        private readonly rabbitConnection?: RabbitMQConnection,
+        private readonly prefetchCount = RABBITMQ_PREFETCH_COUNT,
     ) {}
 
     async enqueue<T>(queue: string, data: T): Promise<void> {
-        const channel = await getChannel(this.channelName);
+        const channel = await this.rabbitConnection!.getChannel(this.channelName);
         await channel.assertQueue(queue, {
             durable: true,
             deadLetterExchange: 'dlx',
@@ -26,7 +28,7 @@ export class RabbitTaskQueue implements ITaskQueue {
     }
 
     async consume<T>(queue: string, handler: (data: T) => Promise<void>): Promise<void> {
-        const channel = await getChannel(this.channelName);
+        const channel = await this.rabbitConnection!.getChannel(this.channelName);
         await channel.assertQueue(queue, {
             durable: true,
             deadLetterExchange: 'dlx',

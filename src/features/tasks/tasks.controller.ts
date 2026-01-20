@@ -2,10 +2,9 @@ import { Request, Response, NextFunction } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { ITaskFacade } from './tasks.interfaces';
 import { CreateTaskDto, UpdateTaskDto } from './tasks.types';
-import logger from '../../shared/utils/logger';
 
 export class TaskController {
-    constructor(private taskFacade: ITaskFacade) {}
+    constructor(private taskFacade: ITaskFacade) { }
 
     async createTask(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
@@ -18,12 +17,6 @@ export class TaskController {
             };
 
             const task = await this.taskFacade.createTask(dto);
-
-            logger.info('TASK_CTRL', 'Task created successfully', { 
-                taskId: task.id, 
-                userId: task.userId,
-                reqId: req.headers['x-request-id'] 
-            });
 
             res.status(StatusCodes.CREATED).json({
                 success: true,
@@ -45,11 +38,6 @@ export class TaskController {
 
             const task = await this.taskFacade.updateTask(taskId, updateData);
 
-            logger.info('TASK_CTRL', 'Task updated successfully', { 
-                taskId, 
-                reqId: req.headers['x-request-id'] 
-            });
-
             res.status(StatusCodes.OK).json({
                 success: true,
                 data: task,
@@ -64,11 +52,6 @@ export class TaskController {
             const taskId = req.params.taskId as string;
 
             await this.taskFacade.deleteTask(taskId);
-
-            logger.info('TASK_CTRL', 'Task deleted successfully', { 
-                taskId, 
-                reqId: req.headers['x-request-id'] 
-            });
 
             res.status(StatusCodes.OK).json({
                 success: true,

@@ -1,15 +1,17 @@
 import { IEventBus } from '../../interfaces';
-import { getChannel, RABBIT_PREFETCH_COUNT } from '../../config/rabbit';
+import type { RabbitMQConnection } from '../../infrastructure';
+import { RABBITMQ_PREFETCH_COUNT } from '../../config/env.config';
 import logger from '../../utils/logger';
 
 export class RabbitEventBus implements IEventBus {
     constructor(
         private readonly channelName: string = 'event-bus',
-        private readonly prefetchCount = RABBIT_PREFETCH_COUNT,
+        private readonly rabbitConnection?: RabbitMQConnection,
+        private readonly prefetchCount = RABBITMQ_PREFETCH_COUNT,
     ) {}
 
     async publish(event: string, payload: any): Promise<void> {
-        const channel = await getChannel(this.channelName);
+        const channel = await this.rabbitConnection!.getChannel(this.channelName);
         await channel.assertExchange(event, 'fanout', { durable: true });
 
         const buffer = Buffer.from(JSON.stringify(payload));
@@ -19,7 +21,7 @@ export class RabbitEventBus implements IEventBus {
     }
 
     async subscribe(event: string, handler: (payload: any) => Promise<void>): Promise<void> {
-        const channel = await getChannel(this.channelName);
+        const channel = await this.rabbitConnection!.getChannel(this.channelName);
         await channel.assertExchange(event, 'fanout', { durable: true });
 
         const { queue } = await channel.assertQueue('', {

@@ -1,0 +1,27 @@
+global:
+  scrape_interval: 15s
+
+# Load alert and recording rules
+rule_files:
+  - 'alerts.yml'
+  - 'recording-rules.yml'
+
+scrape_configs:
+  # Application metrics
+  - job_name: 'scalable-task-scheduler'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['host.docker.internal:8080']
+
+  # Infrastructure exporters
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis_exporter:9121']
+
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres_exporter:9187']
+
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node_exporter:9100']

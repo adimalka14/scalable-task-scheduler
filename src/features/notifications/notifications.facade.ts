@@ -4,8 +4,8 @@ import {
     UpdateNotificationDto,
     Notification,
     TaskTimedArrivalEvent,
-    NOTIFICATION_TYPES,
-    NOTIFICATION_STATUS,
+    NotificationType,
+    NotificationStatus,
 } from './notifications.types';
 import { IEventBus } from '../../shared/interfaces';
 import { EVENTS } from '../../shared/queue/queue.constants';
@@ -15,7 +15,7 @@ export class NotificationFacade implements INotificationFacade {
     constructor(
         private service: INotificationService,
         private eventBus: IEventBus,
-    ) {}
+    ) { }
 
     async init() {
         await this.eventBus.subscribe(
@@ -23,12 +23,22 @@ export class NotificationFacade implements INotificationFacade {
             async (data: TaskTimedArrivalEvent) => {
                 logger.silly('NOTIFICATION_FACADE', 'Notification facade received task timed arrival', data);
 
+                const existing = await this.service.getTaskNotifications(data.taskId);
+                const hasReminder = existing.some((n) => n.type === NotificationType.TASK_REMINDER);
+
+                if (hasReminder) {
+                    logger.debug('NOTIFICATION_FACADE', 'Notification already exists, skipping duplicate', {
+                        taskId: data.taskId,
+                    });
+                    return;
+                }
+
                 const dto: CreateNotificationDto = {
                     taskId: data.taskId,
-                    type: NOTIFICATION_TYPES.REMINDER,
-                    status: NOTIFICATION_STATUS.PENDING,
+                    type: NotificationType.TASK_REMINDER,
+                    status: NotificationStatus.PENDING,
                     message: `Reminder for task ${data.taskId}`,
-                    sentAt: new Date(),
+                    sentAt: null,
                 };
 
                 await this.createNotification(dto);
@@ -47,9 +57,6 @@ export class NotificationFacade implements INotificationFacade {
             message: notification.message,
         });
 
-        logger.info('NOTIFICATION_FACADE', 'Notification facade created notification successfully', {
-            notificationId: notification.id,
-        });
         return notification;
     }
 
@@ -64,19 +71,12 @@ export class NotificationFacade implements INotificationFacade {
             message: notification.message,
         });
 
-        logger.info('NOTIFICATION_FACADE', 'Notification facade updated notification successfully', {
-            notificationId: id,
-        });
         return notification;
     }
 
     async deleteNotification(id: string): Promise<void> {
         await this.service.deleteNotification(id);
         await this.eventBus.publish(EVENTS.EVENT_BUS_QUEUE.NOTIFICATION_DELETED, {
-            notificationId: id,
-        });
-
-        logger.info('NOTIFICATION_FACADE', 'Notification facade deleted notification successfully', {
             notificationId: id,
         });
     }
@@ -89,7 +89,7 @@ export class NotificationFacade implements INotificationFacade {
         return await this.service.getTaskNotifications(taskId);
     }
 
-    async getNotificationsByStatus(status: string): Promise<Notification[]> {
+    async getNotificationsByStatus(status: NotificationStatus): Promise<Notification[]> {
         return await this.service.getNotificationsByStatus(status);
     }
 }

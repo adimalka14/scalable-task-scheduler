@@ -20,7 +20,11 @@ export const swaggerOptions = {
             },
             {
                 name: 'Health',
-                description: 'Health check endpoints',
+                description: 'Health and readiness check endpoints',
+            },
+            {
+                name: 'Monitoring',
+                description: 'Prometheus metrics and observability endpoints',
             },
         ],
         servers: [
@@ -119,14 +123,40 @@ export const swaggerOptions = {
                     type: 'object',
                     properties: {
                         error: {
-                            type: 'string',
-                            description: 'Error name',
-                            example: 'NotFoundError',
-                        },
-                        message: {
-                            type: 'string',
-                            description: 'Error message',
-                            example: 'Task with id 123 not found',
+                            type: 'object',
+                            properties: {
+                                code: {
+                                    type: 'string',
+                                    description: 'Machine-readable error code',
+                                    example: 'TASK_NOT_FOUND',
+                                },
+                                message: {
+                                    type: 'string',
+                                    description: 'Human-readable error message',
+                                    example: 'Task with ID xyz not found',
+                                },
+                                statusCode: {
+                                    type: 'integer',
+                                    description: 'HTTP status code',
+                                    example: 404,
+                                },
+                                requestId: {
+                                    type: 'string',
+                                    description: 'Request ID for tracing',
+                                    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+                                },
+                                traceId: {
+                                    type: 'string',
+                                    description: 'Trace ID for distributed tracing',
+                                    example: 'trace-abc-123',
+                                },
+                                details: {
+                                    type: 'object',
+                                    description: 'Additional error details (optional)',
+                                    nullable: true,
+                                },
+                            },
+                            required: ['code', 'message', 'statusCode'],
                         },
                     },
                 },
