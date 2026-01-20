@@ -3,3 +3,22 @@ node_modules
 logs/
 package-lock.json
 /src/generated/prisma
+
+# Backup files
+*~
+*.bak
+*.swp
+*.swo
+
+# IDE
+.idea/
+*.iml
+
+# Build outputs
+dist/
+coverage/
+*.log
+
+# Test outputs
+jest-html-reporters-attach/
+jest_html_reporters.html
