@@ -64,4 +64,4 @@ jobs:
         run: npm run build
 
       - name: Docker build
-        run: docker build -t task-scheduler:ci .
+        run: docker build -f infra/Dockerfile -t task-scheduler:ci .
